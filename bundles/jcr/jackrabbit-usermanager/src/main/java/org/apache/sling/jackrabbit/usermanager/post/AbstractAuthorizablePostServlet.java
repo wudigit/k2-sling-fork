@@ -740,7 +740,7 @@ public abstract class AbstractAuthorizablePostServlet extends SlingAllMethodsSer
 	String hash = sha1Hash(INSTANCE_SEED + item);
 	StringBuilder sb = new StringBuilder();
 	for (int i = 0; i < STORAGE_LEVELS; i++) {
-	    sb.append(hash, i * 2, (i * 2) + 1).append("/");
+	    sb.append(hash, i * 2, (i * 2) + 2).append("/");
 	}
 	return sb.toString();
     }
