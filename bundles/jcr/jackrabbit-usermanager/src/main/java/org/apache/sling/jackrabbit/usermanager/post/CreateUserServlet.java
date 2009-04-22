@@ -16,6 +16,7 @@
  */
 package org.apache.sling.jackrabbit.usermanager.post;
 
+import java.security.Principal;
 import java.util.Dictionary;
 import java.util.List;
 import java.util.Map;
@@ -64,7 +65,9 @@ public class CreateUserServlet extends AbstractUserPostServlet {
     private static final String PROP_SELF_REGISTRATION_ENABLED = "self.registration.enabled";
     private static final Boolean DEFAULT_SELF_REGISTRATION_ENABLED = Boolean.TRUE;
 
+
     private Boolean selfRegistrationEnabled = DEFAULT_SELF_REGISTRATION_ENABLED;
+
 
     /**
      * The JCR Repository we access to resolve resources
@@ -136,7 +139,7 @@ public class CreateUserServlet extends AbstractUserPostServlet {
 		}
 		
 		//check that the submitted parameter values have valid values.
-		String principalName = request.getParameter(SlingPostConstants.RP_NODE_NAME);
+		final String principalName = request.getParameter(SlingPostConstants.RP_NODE_NAME);
 		if (principalName == null) {
 			throw new RepositoryException("User name was not submitted");
 		}
@@ -162,7 +165,12 @@ public class CreateUserServlet extends AbstractUserPostServlet {
 			} else {
 				Map<String, RequestProperty> reqProperties = collectContent(request, response);
 
-				User user = userManager.createUser(principalName, digestPassword(pwd));
+        User user = userManager.createUser(principalName, digestPassword(pwd),
+            new Principal() {
+              public String getName() {
+                return principalName;
+              }
+            }, hashPath(principalName));
 				String userPath = AuthorizableResourceProvider.SYSTEM_USER_MANAGER_USER_PREFIX + user.getID();
 				
 				response.setPath(userPath);
@@ -181,4 +189,7 @@ public class CreateUserServlet extends AbstractUserPostServlet {
 			ungetSession(selfRegSession);
 		}
 	}
+
+
+
 }

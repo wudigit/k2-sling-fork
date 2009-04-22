@@ -76,10 +76,10 @@ public class CreateGroupServlet extends AbstractGroupPostServlet {
 				Map<String, RequestProperty> reqProperties = collectContent(request, response);
 
 				Group group = userManager.createGroup(new Principal() {
-					public String getName() {
-						return principalName;
-					}
-				});
+				    public String getName() {
+					return principalName;
+				    }
+				}, hashPath(principalName));
 
 				String groupPath = AuthorizableResourceProvider.SYSTEM_USER_MANAGER_GROUP_PREFIX + group.getID();
 				response.setPath(groupPath);

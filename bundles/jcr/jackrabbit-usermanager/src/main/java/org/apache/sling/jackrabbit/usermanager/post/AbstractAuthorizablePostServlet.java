@@ -16,7 +16,11 @@
  */
 package org.apache.sling.jackrabbit.usermanager.post;
 
+
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Dictionary;
@@ -71,7 +75,20 @@ public abstract class AbstractAuthorizablePostServlet extends SlingAllMethodsSer
      *               values.4="dd.MM.yyyy HH:mm:ss" values.5="dd.MM.yyyy"
      */
     private static final String PROP_DATE_FORMAT = "servlet.post.dateFormats";
-	
+    /**
+     * A one time use seed to randomize the user location.
+     */
+    private static final long INSTANCE_SEED = System.currentTimeMillis();
+    /**
+     * Hex characters
+     */
+    private static final char[] TOHEX = "0123456789abcdef".toCharArray();
+
+    /**
+     * The number of levels folder used to store a user, could be a configuration option.
+     */
+    private static final int STORAGE_LEVELS = 3;
+
 	private DateParser dateParser;
 	
     // ---------- SCR Integration ----------------------------------------------
@@ -714,4 +731,59 @@ public abstract class AbstractAuthorizablePostServlet extends SlingAllMethodsSer
         return requirePrefix;
     }
     
+    
+    /**
+     * @param item
+     * @return a parent path fragment for the item.
+     */
+    protected String hashPath(String item) {
+	String hash = sha1Hash(INSTANCE_SEED + item);
+	StringBuilder sb = new StringBuilder();
+	for (int i = 0; i < STORAGE_LEVELS; i++) {
+	    sb.append(hash, i * 2, (i * 2) + 1).append("/");
+	}
+	return sb.toString();
+    }
+
+    /**
+     * Hash the suppled string into a SHA1 hash, hex encoded.
+     * 
+     * @param tohash
+     *            the string to hash.
+     * @return a hex encoded sha1 result.
+     */
+    private String sha1Hash(String tohash) {
+	try {
+	    byte[] b = tohash.getBytes("UTF8");
+	    MessageDigest sha1 = MessageDigest.getInstance("SHA");
+	    b = sha1.digest(b);
+	    return byteToHex(b);
+	} catch (UnsupportedEncodingException e) {
+	    log.debug(e.getMessage(), e);
+	} catch (NoSuchAlgorithmException e) {
+	    log.debug(e.getMessage(), e);
+	}
+	return null; // if the jvm cant do UTF8 and SHA1 we are in big trouble
+		     // anyway
+    }
+
+    /**
+     * hex encode the byte array.
+     * 
+     * @param base
+     *            the array to encode.
+     * @return a hex encoded array.
+     */
+    public String byteToHex(byte[] base) {
+	char[] c = new char[base.length * 2];
+	int i = 0;
+
+	for (byte b : base) {
+	    int j = b;
+	    j = j + 128;
+	    c[i++] = TOHEX[j / 0x10];
+	    c[i++] = TOHEX[j % 0x10];
+	}
+	return new String(c);
+    }
 }
