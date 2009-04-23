@@ -35,14 +35,52 @@ import org.apache.sling.servlets.post.Modification;
 import org.apache.sling.servlets.post.SlingPostConstants;
 
 /**
- * Sling Post Servlet implementation for creating a group in the jackrabbit
- * UserManager.
+ * <p>
+ * Sling Post Servlet implementation for creating a group in the jackrabbit UserManager.
+ * </p>
+ * <h2>Rest Service Description</h2>
+ * <p>
+ * Creates a new group. Maps on to nodes of resourceType <code>sling/groups</code> like
+ * <code>/rep:system/rep:userManager/rep:groups</code> mapped to a resource url
+ * <code>/system/userManager/group</code>. This servlet responds at
+ * <code>/system/userManager/group.create.html</code>
+ * </p>
+ * <h4>Methods</h4>
+ * <ul>
+ * <li>POST</li>
+ * </ul>
+ * <h4>Post Parameters</h4>
+ * <dl>
+ * <dt>:name</dt>
+ * <dd>The name of the new group (required)</dd>
+ * <dt>*</dt>
+ * <dd>Any additional parameters become properties of the group node (optional)</dd>
+ * </dl>
+ * <h4>Response</h4>
+ * <dl>
+ * <dt>200</dt>
+ * <dd>Success, a redirect is sent to the group resource locator. The redirect comes with
+ * HTML describing the status.</dd>
+ * <dt>500</dt>
+ * <dd>Failure, including group already exists. HTML explains the failure.</dd>
+ * </dl>
+ * <h4>Example</h4>
  * 
- * @scr.component immediate="true" 
+ * <code>
+ * curl -F:name=newGroupA  -Fproperty1=value1 http://localhost:8080/system/userManager/group.create.html
+ * </code>
+ * 
+ * <h4>Notes</h4>
+ * <p>
+ * Groups are stored as JCR node in a 3 way hased tree, for example
+ * <code>/rep:system/rep:userManager/rep:groups/ab/3e/4d/newGroupA</code>
+ * </p>
+ * 
+ * @scr.component immediate="true"
  * @scr.service interface="javax.servlet.Servlet"
  * @scr.property name="sling.servlet.resourceTypes" value="sling/groups"
- * @scr.property name="sling.servlet.methods" value="POST" 
- * @scr.property name="sling.servlet.selectors" value="create" 
+ * @scr.property name="sling.servlet.methods" value="POST"
+ * @scr.property name="sling.servlet.selectors" value="create"
  */
 public class CreateGroupServlet extends AbstractGroupPostServlet {
 	private static final long serialVersionUID = -1084915263933901466L;
