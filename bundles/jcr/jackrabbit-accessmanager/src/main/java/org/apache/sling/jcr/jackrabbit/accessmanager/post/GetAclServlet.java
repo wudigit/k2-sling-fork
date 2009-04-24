@@ -111,12 +111,13 @@ import org.slf4j.LoggerFactory;
  * </pre>
  * </code>
  * 
- * @scr.component immediate="true"
+ * 
+ * @scr.component immediate="true" 
  * @scr.service interface="javax.servlet.Servlet"
  * @scr.property name="sling.servlet.resourceTypes" value="sling/servlet/default"
- * @scr.property name="sling.servlet.methods" value="GET"
- * @scr.property name="sling.servlet.selectors" value="acl"
- * @scr.property name="sling.servlet.extensions " value="json"
+ * @scr.property name="sling.servlet.methods" value="GET" 
+ * @scr.property name="sling.servlet.selectors" value="acl" 
+ * @scr.property name="sling.servlet.extensions " value="json" 
  */
 public class GetAclServlet extends SlingAllMethodsServlet {
 	private static final long serialVersionUID = 3391376559396223184L;

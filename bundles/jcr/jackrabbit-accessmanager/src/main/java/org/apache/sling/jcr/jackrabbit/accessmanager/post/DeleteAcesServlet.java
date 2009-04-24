@@ -41,8 +41,8 @@ import org.apache.sling.servlets.post.SlingPostConstants;
 
 /**
  * <p>
- * Sling Post Servlet implementation for deleting the ACE for a set of principals on a JCR
- * resource.
+ * Sling Post Servlet implementation for deleting the ACE for a set of principals on
+ * a JCR resource.
  * </p>
  * <h2>Rest Service Description</h2>
  * <p>
@@ -70,11 +70,11 @@ import org.apache.sling.servlets.post.SlingPostConstants;
  * <dd>Failure. HTML explains the failure.</dd>
  * </dl>
  * 
- * @scr.component immediate="true"
+ * @scr.component immediate="true" 
  * @scr.service interface="javax.servlet.Servlet"
  * @scr.property name="sling.servlet.resourceTypes" value="sling/servlet/default"
- * @scr.property name="sling.servlet.methods" value="POST"
- * @scr.property name="sling.servlet.selectors" value="deleteAce"
+ * @scr.property name="sling.servlet.methods" value="POST" 
+ * @scr.property name="sling.servlet.selectors" value="deleteAce" 
  */
 public class DeleteAcesServlet extends AbstractAccessPostServlet {
 	private static final long serialVersionUID = 3784866802938282971L;

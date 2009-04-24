@@ -16,8 +16,26 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.sling.scripting.xproc.xpl.api;
+package org.apache.sling.engine.auth;
 
-public interface MultiContainerStep extends Step {
+import org.apache.sling.api.SlingException;
+
+/**
+ * The <code>NoAuthenticationHandlerException</code> is thrown to indicate that
+ * there is no {@link AuthenticationHandler} willing to handle the request.
+ * <p>
+ * This exception is thrown without a message. The caller of the
+ * {@link Authenticator} method called is expected to immediately handle this
+ * exception and not to forward it up the call chain.
+ * <p>
+ * This exception is not intended to be thrown by client code but is used by the
+ * {@link Authenticator} implementation to indicate, that no
+ * {@link AuthenticationHandler} is available to login.
+ */
+public class NoAuthenticationHandlerException extends SlingException {
+
+    public NoAuthenticationHandlerException() {
+        super();
+    }
 
 }

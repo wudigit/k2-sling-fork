@@ -83,11 +83,11 @@ import org.slf4j.LoggerFactory;
  * will not be added to the group. The group will only contain granted privileges.
  * </p>
  * 
- * @scr.component immediate="true"
+ * @scr.component immediate="true" 
  * @scr.service interface="javax.servlet.Servlet"
  * @scr.property name="sling.servlet.resourceTypes" value="sling/servlet/default"
- * @scr.property name="sling.servlet.methods" value="POST"
- * @scr.property name="sling.servlet.selectors" value="modifyAce"
+ * @scr.property name="sling.servlet.methods" value="POST" 
+ * @scr.property name="sling.servlet.selectors" value="modifyAce" 
  */
 public class ModifyAceServlet extends AbstractAccessPostServlet {
 	private static final long serialVersionUID = -9182485466670280437L;
@@ -276,3 +276,4 @@ public class ModifyAceServlet extends AbstractAccessPostServlet {
 		}
 	}
 }
+>>>>>>> trunk:bundles/jcr/jackrabbit-accessmanager/src/main/java/org/apache/sling/jcr/jackrabbit/accessmanager/post/ModifyAceServlet.java
