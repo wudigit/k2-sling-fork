@@ -276,4 +276,3 @@ public class ModifyAceServlet extends AbstractAccessPostServlet {
 		}
 	}
 }
->>>>>>> trunk:bundles/jcr/jackrabbit-accessmanager/src/main/java/org/apache/sling/jcr/jackrabbit/accessmanager/post/ModifyAceServlet.java
