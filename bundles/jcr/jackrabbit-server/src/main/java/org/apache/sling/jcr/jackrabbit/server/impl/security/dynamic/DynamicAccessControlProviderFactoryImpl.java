@@ -16,21 +16,21 @@
  */
 package org.apache.sling.jcr.jackrabbit.server.impl.security.dynamic;
 
+import org.apache.jackrabbit.core.RepositoryImpl;
+import org.apache.jackrabbit.core.SessionImpl;
 import org.apache.jackrabbit.core.config.BeanConfig;
 import org.apache.jackrabbit.core.config.WorkspaceSecurityConfig;
 import org.apache.jackrabbit.core.security.authorization.AccessControlProvider;
 import org.apache.jackrabbit.core.security.authorization.AccessControlProviderFactory;
-import org.apache.jackrabbit.core.security.authorization.acl.ACLProvider;
 import org.apache.jackrabbit.core.security.user.UserAccessControlProvider;
-import org.apache.jackrabbit.core.SessionImpl;
-import org.apache.jackrabbit.core.RepositoryImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.jcr.RepositoryException;
-import javax.jcr.Session;
 import java.util.Collections;
 import java.util.Map;
+
+import javax.jcr.RepositoryException;
+import javax.jcr.Session;
 
 /**
  * Default implementation of the AccessControlProviderFactory

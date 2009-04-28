@@ -16,16 +16,17 @@
  */
 package org.apache.sling.jcr.jackrabbit.server.impl.security.dynamic;
 
+import org.apache.commons.collections.map.ListOrderedMap;
 import org.apache.jackrabbit.api.jsr283.security.AccessControlEntry;
-import org.apache.jackrabbit.api.jsr283.security.AccessControlPolicy;
-import org.apache.jackrabbit.api.jsr283.security.Privilege;
 import org.apache.jackrabbit.api.jsr283.security.AccessControlList;
 import org.apache.jackrabbit.api.jsr283.security.AccessControlManager;
+import org.apache.jackrabbit.api.jsr283.security.AccessControlPolicy;
+import org.apache.jackrabbit.api.jsr283.security.Privilege;
 import org.apache.jackrabbit.api.security.principal.PrincipalManager;
+import org.apache.jackrabbit.core.ItemImpl;
 import org.apache.jackrabbit.core.NodeId;
 import org.apache.jackrabbit.core.NodeImpl;
 import org.apache.jackrabbit.core.PropertyImpl;
-import org.apache.jackrabbit.core.ItemImpl;
 import org.apache.jackrabbit.core.SessionImpl;
 import org.apache.jackrabbit.core.observation.SynchronousEventListener;
 import org.apache.jackrabbit.core.security.SecurityConstants;
@@ -33,23 +34,30 @@ import org.apache.jackrabbit.core.security.authorization.AbstractAccessControlPr
 import org.apache.jackrabbit.core.security.authorization.AbstractCompiledPermissions;
 import org.apache.jackrabbit.core.security.authorization.AccessControlConstants;
 import org.apache.jackrabbit.core.security.authorization.AccessControlEditor;
+import org.apache.jackrabbit.core.security.authorization.AccessControlEntryIterator;
 import org.apache.jackrabbit.core.security.authorization.AccessControlProvider;
 import org.apache.jackrabbit.core.security.authorization.CompiledPermissions;
+import org.apache.jackrabbit.core.security.authorization.JackrabbitAccessControlEntry;
 import org.apache.jackrabbit.core.security.authorization.Permission;
 import org.apache.jackrabbit.core.security.authorization.PrivilegeRegistry;
 import org.apache.jackrabbit.core.security.authorization.UnmodifiableAccessControlList;
-import org.apache.jackrabbit.core.security.authorization.AccessControlEntryIterator;
-import org.apache.jackrabbit.core.security.authorization.JackrabbitAccessControlEntry;
 import org.apache.jackrabbit.core.security.principal.PrincipalImpl;
 import org.apache.jackrabbit.spi.Path;
 import org.apache.jackrabbit.spi.commons.name.PathFactoryImpl;
 import org.apache.jackrabbit.util.Text;
 import org.apache.sling.jcr.jackrabbit.server.impl.Activator;
-import org.apache.sling.jcr.jackrabbit.server.impl.DynamicPrincipalManager;
-import org.apache.sling.jcr.jackrabbit.server.impl.DynamicPrincipalManagerFactory;
-import org.apache.commons.collections.map.ListOrderedMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.security.Principal;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import javax.jcr.ItemNotFoundException;
 import javax.jcr.NodeIterator;
@@ -61,15 +69,6 @@ import javax.jcr.observation.EventIterator;
 import javax.jcr.observation.EventListener;
 import javax.jcr.query.Query;
 import javax.jcr.query.QueryManager;
-import java.security.Principal;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Arrays;
 
 /**
  * The ACLProvider generates access control policies out of the items stored
@@ -115,7 +114,7 @@ public class DynamicACLProvider extends AbstractAccessControlProvider implements
      */
     private boolean initializedWithDefaults;
 
-    public DynamicPrincipalManager dynamicPrincipalManager;
+    private EntryCollector entryCollector;
 
     //-------------------------------------------------< AccessControlUtils >---
     /**
@@ -148,8 +147,6 @@ public class DynamicACLProvider extends AbstractAccessControlProvider implements
     public void init(Session systemSession, Map configuration) throws RepositoryException {
         super.init(systemSession, configuration);
         
-        DynamicPrincipalManagerFactory principalManagerFactory = Activator.getDynamicPrincipalManagerFactory();
-        dynamicPrincipalManager = principalManagerFactory.getDynamicPrincipalManager();
 
         // make sure the workspace of the given systemSession has a
         // minimal protection on the root node.
@@ -160,6 +157,8 @@ public class DynamicACLProvider extends AbstractAccessControlProvider implements
         if (initializedWithDefaults && !isAccessControlled(root)) {
             initRootACL(session, systemEditor);
         }
+        
+        entryCollector = new DynamicEntryCollector(Activator.getDynamicPrincipalManagerFactory().getDynamicPrincipalManager());
     }
 
     /**
@@ -222,6 +221,15 @@ public class DynamicACLProvider extends AbstractAccessControlProvider implements
             return cp.grants(PathFactoryImpl.getInstance().getRootPath(), Permission.READ);
         }
     }
+    
+    /**
+     * Get the configured collector, override this for extension and provide your own implementation.
+     * @return
+     */
+    protected EntryCollector getEntryCollector() {
+      return entryCollector;
+    }
+
 
     //------------------------------------------------------------< private >---
 
@@ -648,7 +656,8 @@ public class DynamicACLProvider extends AbstractAccessControlProvider implements
             if (isAccessControlled(node)) {
                 // build acl for the access controlled node
                 NodeImpl aclNode = node.getNode(N_POLICY);
-                DynamicACLTemplate.collectEntries(aclNode, principalNamesToEntries, dynamicPrincipalManager);
+                // get the collector and collect entries
+                getEntryCollector().collectEntries(aclNode, principalNamesToEntries);
             }
             // then, recursively look for access controlled parents up the hierarchy.
             if (!rootNodeId.equals(node.getId())) {
@@ -667,5 +676,6 @@ public class DynamicACLProvider extends AbstractAccessControlProvider implements
             return new AccessControlEntryIterator(entries);
         }
     }
+
 
 }

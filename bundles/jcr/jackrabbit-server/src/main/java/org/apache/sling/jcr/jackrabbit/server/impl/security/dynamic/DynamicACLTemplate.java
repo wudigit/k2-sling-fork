@@ -19,21 +19,17 @@ package org.apache.sling.jcr.jackrabbit.server.impl.security.dynamic;
 import org.apache.commons.collections.map.ListOrderedMap;
 import org.apache.jackrabbit.api.jsr283.security.AccessControlEntry;
 import org.apache.jackrabbit.api.jsr283.security.AccessControlException;
-import org.apache.jackrabbit.api.jsr283.security.Privilege;
 import org.apache.jackrabbit.api.jsr283.security.AccessControlManager;
+import org.apache.jackrabbit.api.jsr283.security.Privilege;
 import org.apache.jackrabbit.api.security.principal.PrincipalManager;
 import org.apache.jackrabbit.core.NodeImpl;
 import org.apache.jackrabbit.core.SessionImpl;
 import org.apache.jackrabbit.core.security.authorization.AccessControlConstants;
 import org.apache.jackrabbit.core.security.authorization.AccessControlEntryImpl;
 import org.apache.jackrabbit.core.security.authorization.JackrabbitAccessControlList;
-import org.apache.jackrabbit.core.security.authorization.PrivilegeRegistry;
 import org.apache.jackrabbit.core.security.authorization.Permission;
-import org.apache.sling.jcr.jackrabbit.server.impl.DynamicPrincipalManager;
+import org.apache.jackrabbit.core.security.authorization.PrivilegeRegistry;
 
-import javax.jcr.NodeIterator;
-import javax.jcr.RepositoryException;
-import javax.jcr.Value;
 import java.security.Principal;
 import java.security.acl.Group;
 import java.util.ArrayList;
@@ -41,6 +37,10 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import javax.jcr.NodeIterator;
+import javax.jcr.RepositoryException;
+import javax.jcr.Value;
 
 /**
  * Implementation of the {@link JackrabbitAccessControlList} interface that
@@ -124,52 +124,6 @@ class DynamicACLTemplate implements JackrabbitAccessControlList {
         }
     }
 
-    /**
-     * Separately collect the entries defined for the principals with the
-     * specified names and return a map consisting of principal name key
-     * and a list of ACEs as value.
-     *
-     * @param aclNode
-     * @param princToEntries Map of key = principalName and value = ArrayList
-     * to be filled with ACEs matching the principal names.
-     * @throws RepositoryException
-     */
-    static void collectEntries(NodeImpl aclNode, Map<String, List<AccessControlEntry>> princToEntries, DynamicPrincipalManager dynamicPrincipalManager)
-            throws RepositoryException {
-        SessionImpl sImpl = (SessionImpl) aclNode.getSession();
-        PrincipalManager principalMgr = sImpl.getPrincipalManager();
-        AccessControlManager acMgr = sImpl.getAccessControlManager();
-
-        NodeIterator itr = aclNode.getNodes();
-        while (itr.hasNext()) {
-            NodeImpl aceNode = (NodeImpl) itr.nextNode();
-            String principalName = aceNode.getProperty(AccessControlConstants.P_PRINCIPAL_NAME).getString();
-            // only process aceNode if 'principalName' is contained in the given set
-            if (princToEntries.containsKey(principalName) || dynamicPrincipalManager.hasPrincipalInContext(principalName, aclNode)) {
-                Principal princ = principalMgr.getPrincipal(principalName);
-
-                Value[] privValues = aceNode.getProperty(AccessControlConstants.P_PRIVILEGES).getValues();
-                Privilege[] privs = new Privilege[privValues.length];
-                for (int i = 0; i < privValues.length; i++) {
-                    privs[i] = acMgr.privilegeFromName(privValues[i].getString());
-                }
-                // create a new ACEImpl (omitting validation check)
-                Entry ace = new Entry(
-                        princ,
-                        privs,
-                        aceNode.isNodeType(AccessControlConstants.NT_REP_GRANT_ACE));
-                // add it to the proper list (e.g. separated by principals)
-                List<AccessControlEntry> l = princToEntries.get(principalName);
-                if ( l == null ) {
-                  l = new ArrayList<AccessControlEntry>();
-                  l.add(ace);
-                  princToEntries.put(principalName, l);
-                } else {
-                  l.add(ace);
-                }
-            }
-        }
-    }
 
     private List<AccessControlEntry> internalGetEntries() {
         List<AccessControlEntry> l = new ArrayList<AccessControlEntry>();
