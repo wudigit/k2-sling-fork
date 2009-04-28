@@ -33,66 +33,74 @@ import javax.jcr.RepositoryException;
 import javax.jcr.Session;
 
 /**
- * Default implementation of the AccessControlProviderFactory
+ * Default implementation of the AccessControlProviderFactory a copy of the Jackrabbit
+ * core version, since the respoitory config does not allow configuration of more than one
+ * workspace with different AccessControlProviders.
  */
-public class DynamicAccessControlProviderFactoryImpl implements AccessControlProviderFactory {
+public class DynamicAccessControlProviderFactoryImpl implements
+    AccessControlProviderFactory {
 
-    /**
-     * the default logger
-     */
-    private static final Logger log = LoggerFactory.getLogger(DynamicAccessControlProviderFactoryImpl.class);
+  /**
+   * the default logger
+   */
+  private static final Logger log = LoggerFactory
+      .getLogger(DynamicAccessControlProviderFactoryImpl.class);
 
-    /**
-     * The name of the security workspace (containing users...)
-     */
-    private String secWorkspaceName = null;
-    private String defaultWorkspaceName = null;
+  /**
+   * The name of the security workspace (containing users...)
+   */
+  private String secWorkspaceName = null;
+  private String defaultWorkspaceName = null;
 
-    //---------------------------------------< AccessControlProviderFactory >---
-    /**
-     * @see AccessControlProviderFactory#init(Session)
-     */
-    public void init(Session securitySession) throws RepositoryException {
-        secWorkspaceName = securitySession.getWorkspace().getName();
-        if (securitySession instanceof SessionImpl) {
-            defaultWorkspaceName = ((RepositoryImpl) securitySession.getRepository()).getConfig().getDefaultWorkspaceName();
-        } // else: unable to determine default workspace name
+  // ---------------------------------------< AccessControlProviderFactory >---
+  /**
+   * @see AccessControlProviderFactory#init(Session)
+   */
+  public void init(Session securitySession) throws RepositoryException {
+    secWorkspaceName = securitySession.getWorkspace().getName();
+    if (securitySession instanceof SessionImpl) {
+      defaultWorkspaceName = ((RepositoryImpl) securitySession.getRepository())
+          .getConfig().getDefaultWorkspaceName();
+    } // else: unable to determine default workspace name
+  }
+
+  /**
+   * @see AccessControlProviderFactory#close()
+   */
+  public void close() throws RepositoryException {
+    // nothing to do
+  }
+
+  /**
+   * @see AccessControlProviderFactory#createProvider(Session, WorkspaceSecurityConfig)
+   */
+  public AccessControlProvider createProvider(Session systemSession,
+      WorkspaceSecurityConfig config) throws RepositoryException {
+    String workspaceName = systemSession.getWorkspace().getName();
+    AccessControlProvider prov;
+    Map props;
+    if (config != null && config.getAccessControlProviderConfig() != null) {
+      BeanConfig bc = config.getAccessControlProviderConfig();
+      prov = (AccessControlProvider) bc.newInstance();
+      props = bc.getParameters();
+    } else {
+      log.debug("No ac-provider configuration for workspace " + workspaceName
+          + " -> using defaults.");
+      if (workspaceName.equals(secWorkspaceName)
+          && !workspaceName.equals(defaultWorkspaceName)) {
+        // UserAccessControlProvider is designed to work with an extra
+        // workspace storing user and groups. therefore avoid returning
+        // this ac provider for the default workspace.
+        prov = new UserAccessControlProvider();
+      } else {
+        prov = new DynamicACLProvider();
+      }
+      log.debug("Default provider for workspace " + workspaceName + " = "
+          + prov.getClass().getName());
+      props = Collections.EMPTY_MAP;
     }
 
-    /**
-     * @see AccessControlProviderFactory#close()
-     */
-    public void close() throws RepositoryException {
-        // nothing to do
-    }
-
-    /**
-     * @see AccessControlProviderFactory#createProvider(Session, WorkspaceSecurityConfig)
-     */
-    public AccessControlProvider createProvider(Session systemSession, WorkspaceSecurityConfig config)
-            throws RepositoryException {
-        String workspaceName = systemSession.getWorkspace().getName();
-        AccessControlProvider prov;
-        Map props;
-        if (config != null && config.getAccessControlProviderConfig() != null) {
-            BeanConfig bc = config.getAccessControlProviderConfig();
-            prov = (AccessControlProvider) bc.newInstance();
-            props = bc.getParameters();
-        } else {
-            log.debug("No ac-provider configuration for workspace " + workspaceName + " -> using defaults.");
-            if (workspaceName.equals(secWorkspaceName) && !workspaceName.equals(defaultWorkspaceName)) {
-                // UserAccessControlProvider is designed to work with an extra
-                // workspace storing user and groups. therefore avoid returning
-                // this ac provider for the default workspace.
-                prov = new UserAccessControlProvider();
-            } else {
-                prov = new DynamicACLProvider();
-            }
-            log.debug("Default provider for workspace " + workspaceName + " = " + prov.getClass().getName());
-            props = Collections.EMPTY_MAP;
-        }
-
-        prov.init(systemSession, props);
-        return prov;
-    }
+    prov.init(systemSession, props);
+    return prov;
+  }
 }

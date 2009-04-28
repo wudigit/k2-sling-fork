@@ -15,7 +15,7 @@
  * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package org.apache.sling.jcr.jackrabbit.server.impl.security.dynamic;
+package org.apache.sling.jcr.jackrabbit.server.impl.security.standard;
 
 import org.apache.jackrabbit.api.jsr283.security.AccessControlEntry;
 import org.apache.jackrabbit.core.NodeImpl;
@@ -29,7 +29,7 @@ import javax.jcr.RepositoryException;
  * Implementations of this class collect together ACE's based on instance of the object
  * and its configuration. This may take account of the node, user, session, patch
  * environment etc. This is an extension API that will allow extension of the
- * DynamicACLTemplate with different EntryCollectors.
+ * ACLProvider with different EntryCollectors.
  */
 public interface EntryCollector {
 

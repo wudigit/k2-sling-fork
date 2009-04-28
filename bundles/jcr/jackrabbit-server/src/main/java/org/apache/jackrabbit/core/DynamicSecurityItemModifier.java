@@ -46,7 +46,7 @@ public abstract class DynamicSecurityItemModifier {
 
     protected DynamicSecurityItemModifier() {
         Class<?> cl = getClass();
-        if (!(cl.equals(org.apache.sling.jcr.jackrabbit.server.impl.security.dynamic.DynamicACLEditor.class))) {
+        if (!(cl.equals(org.apache.sling.jcr.jackrabbit.server.impl.security.standard.ACLEditor.class))) {
             throw new IllegalArgumentException("Only ACLEditor may extend from the DynamicSecurityItemModifier");
         }
     }

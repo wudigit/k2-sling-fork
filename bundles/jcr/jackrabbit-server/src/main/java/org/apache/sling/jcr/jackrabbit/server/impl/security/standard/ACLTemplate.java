@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.sling.jcr.jackrabbit.server.impl.security.dynamic;
+package org.apache.sling.jcr.jackrabbit.server.impl.security.standard;
 
 import org.apache.commons.collections.map.ListOrderedMap;
 import org.apache.jackrabbit.api.jsr283.security.AccessControlEntry;
@@ -43,14 +43,18 @@ import javax.jcr.RepositoryException;
 import javax.jcr.Value;
 
 /**
+ * <p>
  * Implementation of the {@link JackrabbitAccessControlList} interface that
  * is detached from the effective access control content. Consequently, any
  * modifications applied to this ACL only take effect, if the policy gets
  * {@link org.apache.jackrabbit.api.jsr283.security.AccessControlManager#setPolicy(String, org.apache.jackrabbit.api.jsr283.security.AccessControlPolicy) reapplied}
  * to the <code>AccessControlManager</code> and the changes are saved.
+ * </p><p>
+ * This is a modified version of the ACLTemplate that has the static collectEntries removed and replaced by a EntryCollector. This is the only change.
+ * </p>
  */
 @SuppressWarnings("unchecked")
-class DynamicACLTemplate implements JackrabbitAccessControlList {
+class ACLTemplate implements JackrabbitAccessControlList {
 
     /**
      * Path of the node this ACL template has been created for.
@@ -80,7 +84,7 @@ class DynamicACLTemplate implements JackrabbitAccessControlList {
      * @param path
      * @param principalMgr
      */
-    DynamicACLTemplate(String path, PrincipalManager principalMgr, PrivilegeRegistry privilegeRegistry) {
+    ACLTemplate(String path, PrincipalManager principalMgr, PrivilegeRegistry privilegeRegistry) {
         this.path = path;
         this.principalMgr = principalMgr;
         this.privilegeRegistry = privilegeRegistry;
@@ -90,7 +94,7 @@ class DynamicACLTemplate implements JackrabbitAccessControlList {
      * Create a {@link ACLTemplate} that is used to edit an existing ACL
      * node.
      */
-    DynamicACLTemplate(NodeImpl aclNode, PrivilegeRegistry privilegeRegistry) throws RepositoryException {
+    ACLTemplate(NodeImpl aclNode, PrivilegeRegistry privilegeRegistry) throws RepositoryException {
         if (aclNode == null || !aclNode.isNodeType(AccessControlConstants.NT_REP_ACL)) {
             throw new IllegalArgumentException("Node must be of type: " +
                     AccessControlConstants.NT_REP_ACL);
@@ -325,8 +329,8 @@ class DynamicACLTemplate implements JackrabbitAccessControlList {
             return true;
         }
 
-        if (obj instanceof DynamicACLTemplate) {
-          DynamicACLTemplate acl = (DynamicACLTemplate) obj;
+        if (obj instanceof ACLTemplate) {
+          ACLTemplate acl = (ACLTemplate) obj;
             return path.equals(acl.path) && entries.equals(acl.entries);
         }
         return false;
