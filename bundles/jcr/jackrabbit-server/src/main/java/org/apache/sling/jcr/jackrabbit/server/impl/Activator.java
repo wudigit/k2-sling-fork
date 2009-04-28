@@ -23,6 +23,8 @@ import java.net.URL;
 import java.sql.DriverManager;
 import java.util.Hashtable;
 
+import javax.jcr.Node;
+
 import org.apache.sling.jcr.base.util.RepositoryAccessor;
 import org.apache.sling.jcr.jackrabbit.server.security.LoginModulePlugin;
 import org.osgi.framework.BundleActivator;
@@ -342,6 +344,27 @@ public class Activator implements BundleActivator, ServiceListener {
         configFile = new File(homeDir, "repository.xml");
         SlingServerRepository.copyFile(bundleContext.getBundle(), "repository.xml", configFile);
     	return configFile;
+    }
+
+    /**
+     * @return
+     */
+    public static DynamicPrincipalManagerFactory getDynamicPrincipalManagerFactory() {
+      // simple default implementation to get things going, ultimately this is a service injection
+      return new DynamicPrincipalManagerFactory() {
+
+        public DynamicPrincipalManager getDynamicPrincipalManager() {
+          return new DynamicPrincipalManager(){
+
+            public boolean hasPrincipalInContext(String principalName, Node node) {
+              log.info("Checking Principal {0} for node {1} ",principalName,node);
+              return false;
+            }
+            
+          };
+        }
+        
+      };
     }
 
 }
