@@ -26,7 +26,11 @@ Export-Package: org.apache.sling.jcr.jackrabbit.server.security;uses:=
  ackrabbit.api.security.principal,org.apache.commons.collections.set";
  version="2.0.3.incubator-SNAPSHOT",org.apache.sling.jcr.jackrabbit.se
  rver.security.accessmanager;uses:="javax.jcr,javax.security.auth";ver
- sion="2.0.3.incubator-SNAPSHOT"
+ sion="2.0.3.incubator-SNAPSHOT",org.apache.sling.jcr.jackrabbit.serve
+ r.security.dynamic;uses:="javax.jcr";version="2.0.3.incubator-SNAPSHO
+ T",org.apache.sling.jcr.jackrabbit.server.security;uses:="javax.secur
+ ity.auth.login,javax.jcr,javax.security.auth.callback";version="2.0.3
+ .incubator-SNAPSHOT"
 Import-Package: javax.jcr,javax.jcr.lock,javax.jcr.nodetype,javax.jcr.
  observation,javax.jcr.query,javax.jcr.util,javax.jcr.version,javax.na
  ming,javax.naming.directory,javax.naming.spi,javax.security.auth,java
