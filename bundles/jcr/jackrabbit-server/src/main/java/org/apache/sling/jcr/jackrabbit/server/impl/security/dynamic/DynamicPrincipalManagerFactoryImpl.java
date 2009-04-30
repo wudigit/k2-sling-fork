@@ -40,12 +40,13 @@ public class DynamicPrincipalManagerFactoryImpl extends ServiceTracker implement
     dynamicPrincipalManager = new DynamicPrincipalManager() {
 
       public boolean hasPrincipalInContext(String principalName, Node node) {
-        DynamicPrincipalManager[] services = (DynamicPrincipalManager[]) getServices();
+        Object[] services = getServices();
         if ( services == null || services.length == 0 ) {
           // no managers configured, pass through, the user does not have the principal.
           return false;
         }
-        for (DynamicPrincipalManager principalManager : services) {
+        for (Object serviceObject : services) {
+          DynamicPrincipalManager principalManager = (DynamicPrincipalManager) serviceObject;
           if (principalManager.hasPrincipalInContext(principalName, node)) {
             return true;
           }
