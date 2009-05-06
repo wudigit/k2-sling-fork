@@ -22,10 +22,12 @@ import javax.jcr.observation.EventListener;
 
 /**
  * Things that implement this interface in a bundle are registered as a component are
- * wrapped in a internal jackrabbit Synchronous Event so that the event is fired within
- * the session transaction. Other types of event can simply implement the EventListener.
+ * wrapped registered as a standard JCR Event or an Jackrabbit Synchronous Event. Use of this component and interface
+ * represents an exposure of a JCR System session outside the server bundle. The EventManager Component uses this interface
+ * to track registration. Only activate the EventManager if you trust the code base and all scripting in the JVM.
+ * 
  */
-public interface SynchronousListener extends EventListener {
+public interface InjectedEventListener extends EventListener {
 
   /**
    * An Object the represents the registration, see {@link javax.jcr.observation.ObservationManager#addEventListener(EventListener, int, String, boolean, String[], String[], boolean)}
@@ -61,6 +63,11 @@ public interface SynchronousListener extends EventListener {
      * @return true if no events from the current session should be propagated.
      */
     boolean isNoLocal();
+    
+    /**
+     * @return true if the event is synchronous
+     */
+    boolean isSynchronous();
 
   }
 

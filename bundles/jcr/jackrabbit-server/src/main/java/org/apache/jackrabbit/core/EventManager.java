@@ -18,8 +18,8 @@
 package org.apache.jackrabbit.core;
 
 import org.apache.jackrabbit.core.observation.SynchronousEventListener;
-import org.apache.sling.jcr.jackrabbit.server.event.SynchronousListener;
-import org.apache.sling.jcr.jackrabbit.server.event.SynchronousListener.Registration;
+import org.apache.sling.jcr.jackrabbit.server.event.InjectedEventListener;
+import org.apache.sling.jcr.jackrabbit.server.event.InjectedEventListener.Registration;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.cm.ConfigurationException;
@@ -37,6 +37,7 @@ import javax.jcr.NoSuchWorkspaceException;
 import javax.jcr.Repository;
 import javax.jcr.RepositoryException;
 import javax.jcr.observation.EventIterator;
+import javax.jcr.observation.EventListener;
 import javax.jcr.observation.ObservationManager;
 
 /**
@@ -59,14 +60,14 @@ public class EventManager implements ManagedService {
    * A Wrapper class that wraps the external {@link SynchronousListener} into an internal
    * {@link SynchronousEventListener}
    */
-  public class WrappedSynchronouseEventListener implements SynchronousEventListener {
+  public class WrappedEventListener implements EventListener {
 
-    private SynchronousListener listener;
+    private InjectedEventListener listener;
 
     /**
      * @param listener
      */
-    public WrappedSynchronouseEventListener(SynchronousListener listener) {
+    public WrappedEventListener(InjectedEventListener listener) {
       this.listener = listener;
     }
 
@@ -87,6 +88,16 @@ public class EventManager implements ManagedService {
     }
 
   }
+  
+  public class WrappedSynchronousEventListener extends WrappedEventListener implements SynchronousEventListener {
+    /**
+     * 
+     */
+    public WrappedSynchronousEventListener(InjectedEventListener listener) {
+      super(listener);
+    }
+  
+  }
 
   /**
    * class logger.
@@ -100,7 +111,7 @@ public class EventManager implements ManagedService {
   /**
    * Map of listeners against service reference.
    */
-  private Map<ServiceReference, WrappedSynchronouseEventListener> listeners = new ConcurrentHashMap<ServiceReference, WrappedSynchronouseEventListener>();
+  private Map<ServiceReference, WrappedEventListener> listeners = new ConcurrentHashMap<ServiceReference, WrappedEventListener>();
 
   /**
    * The workspace the manager is connected to.
@@ -121,13 +132,15 @@ public class EventManager implements ManagedService {
    */
   private RepositoryImpl repository;
 
+  private BundleContext bundleContext;
+
   public void activate(ComponentContext ctx) throws NoSuchWorkspaceException,
       RepositoryException {
-    final BundleContext bundleContext = ctx.getBundleContext();
+    bundleContext = ctx.getBundleContext();
     workspaceName = (String) ctx.getProperties().get("workspaceName");
     rebind();
 
-    serviceTracker = new ServiceTracker(bundleContext, SynchronousListener.class
+    serviceTracker = new ServiceTracker(bundleContext, InjectedEventListener.class
         .getName(), null) {
       /**
        * {@inheritDoc}
@@ -136,12 +149,7 @@ public class EventManager implements ManagedService {
        */
       @Override
       public Object addingService(ServiceReference reference) {
-        SynchronousListener listener = (SynchronousListener) bundleContext
-            .getService(reference);
-        WrappedSynchronouseEventListener syncEventListener = new WrappedSynchronouseEventListener(
-            listener);
-        listeners.put(reference, syncEventListener);
-        EventManager.this.addListener(syncEventListener);
+        EventManager.this.addListener(reference);
         return super.addingService(reference);
       }
 
@@ -153,13 +161,7 @@ public class EventManager implements ManagedService {
        */
       @Override
       public void removedService(ServiceReference reference, Object service) {
-        SynchronousEventListener syncEventLister = listeners.get(reference);
-        try {
-          observationManager.removeEventListener(syncEventLister);
-        } catch (RepositoryException e) {
-          LOGGER.error(e.getMessage(), e);
-        }
-        listeners.remove(reference);
+        EventManager.this.removeListener(reference,service);
         super.removedService(reference, service);
       }
 
@@ -171,24 +173,49 @@ public class EventManager implements ManagedService {
        */
       @Override
       public void modifiedService(ServiceReference reference, Object service) {
-        SynchronousListener listener = (SynchronousListener) bundleContext
-            .getService(reference);
-        SynchronousEventListener syncEventLister = listeners.get(reference);
-        try {
-          observationManager.removeEventListener(syncEventLister);
-        } catch (RepositoryException e) {
-          LOGGER.error(e.getMessage(), e);
-        }
-        listeners.remove(reference);
-        WrappedSynchronouseEventListener syncEventListener = new WrappedSynchronouseEventListener(
-            listener);
-        listeners.put(reference, syncEventListener);
-        EventManager.this.addListener(syncEventListener);
+        EventManager.this.removeListener(reference,service);
+        EventManager.this.addListener(reference);
         super.modifiedService(reference, service);
       }
     };
     serviceTracker.open();
 
+  }
+
+  /**
+   * @param reference
+   * @param service
+   */
+  protected void removeListener(ServiceReference reference, Object service) {
+    WrappedEventListener syncEventLister = listeners.get(reference);
+    try {
+      observationManager.removeEventListener(syncEventLister);
+    } catch (RepositoryException e) {
+      LOGGER.error(e.getMessage(), e);
+    }
+    listeners.remove(reference);
+  }
+
+  /**
+   * @param reference
+   */
+  protected void addListener(ServiceReference reference) {
+    InjectedEventListener listener = (InjectedEventListener) bundleContext
+    .getService(reference);
+    WrappedEventListener eventListener = getWrappedEventListener(listener);
+    listeners.put(reference, eventListener);
+    EventManager.this.addListener(eventListener);
+  }
+
+  /**
+   * @param listener
+   * @return
+   */
+  private WrappedEventListener getWrappedEventListener(InjectedEventListener listener) {
+    if ( listener.getRegistration().isSynchronous() ) {
+      return new WrappedSynchronousEventListener(listener);
+    } 
+    return new WrappedEventListener(listener);
   }
 
   /**
@@ -229,7 +256,7 @@ public class EventManager implements ManagedService {
       RepositoryImpl repositoryImpl = repository;
       session = repositoryImpl.getSystemSession(workspaceName);
       observationManager = session.getWorkspace().getObservationManager();
-      for (WrappedSynchronouseEventListener listener : listeners.values()) {
+      for (WrappedEventListener listener : listeners.values()) {
         addListener(listener);
       }
     }
@@ -241,7 +268,7 @@ public class EventManager implements ManagedService {
    * Add a listener to the current observation manager.
    * @param listener
    */
-  private synchronized void addListener(WrappedSynchronouseEventListener listener) {
+  private synchronized void addListener(WrappedEventListener listener) {
     Registration registration = listener.getRegistration();
     try {
       observationManager.addEventListener(listener, registration.getEventTypes(),
