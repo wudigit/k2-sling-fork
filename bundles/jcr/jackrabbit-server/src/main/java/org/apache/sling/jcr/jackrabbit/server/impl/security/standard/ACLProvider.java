@@ -592,8 +592,7 @@ public class ACLProvider extends AbstractAccessControlProvider implements
             // the permission of any of the principals listed in
             // principalNames.
             NodeImpl n = (NodeImpl) session.getNode(path);
-            if (n.isNodeType(NT_REP_ACE)
-                && principalNames.contains(n.getProperty(P_PRINCIPAL_NAME).getString())) {
+            if (n.isNodeType(NT_REP_ACE)) {
               // and reset the readAllowed flag, if the new
               // ACE denies READ.
               if (readAllowed && n.isNodeType(NT_REP_DENY_ACE)) {
