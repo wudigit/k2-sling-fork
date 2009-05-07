@@ -33,6 +33,7 @@ import java.util.Map;
 
 import javax.jcr.NodeIterator;
 import javax.jcr.RepositoryException;
+import javax.jcr.Session;
 import javax.jcr.Value;
 
 /**
@@ -58,7 +59,7 @@ public class EntryCollectorImpl implements EntryCollector {
    *          matching the principal names.
    * @throws RepositoryException
    */
-  public void collectEntries(NodeImpl aclNode,
+  public void collectEntries(Session session, NodeImpl aclNode,
       Map<String, List<AccessControlEntry>> princToEntries) throws RepositoryException {
     SessionImpl sImpl = (SessionImpl) aclNode.getSession();
     PrincipalManager principalMgr = sImpl.getPrincipalManager();
@@ -72,7 +73,7 @@ public class EntryCollectorImpl implements EntryCollector {
       // only process aceNode if 'principalName' is contained in the given set
       // or the dynamicPrincialManager says the user has the principal.
 
-      if (hasPrincipal(principalName, aclNode, princToEntries)) {
+      if (hasPrincipal(session, principalName, aclNode, princToEntries)) {
         Principal princ = principalMgr.getPrincipal(principalName);
 
         Value[] privValues = aceNode.getProperty(AccessControlConstants.P_PRIVILEGES)
@@ -100,13 +101,14 @@ public class EntryCollectorImpl implements EntryCollector {
   /**
    * Does the user have this principal, the standard implementation just checks to see if it
    * was added to the map.
+   * @param session 
    * 
    * @param principalName the name to check
    * @param aclNode the aclNode being constructed
    * @param princToEntries the processed ACE map.
    * @return true if the user has the principal.
    */
-  protected boolean hasPrincipal(String principalName, NodeImpl aclNode,
+  protected boolean hasPrincipal(Session session, String principalName, NodeImpl aclNode,
       Map<String, List<AccessControlEntry>> princToEntries) {
     return princToEntries.containsKey(principalName);
   }
