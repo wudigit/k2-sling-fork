@@ -24,6 +24,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.felix.framework.Logger;
 import org.apache.sling.launchpad.base.impl.ClassLoaderResourceProvider;
@@ -111,7 +112,7 @@ public class MainDelegate implements Launcher {
         this.notifiable = notifiable;
     }
 
-    public void setCommandLine(String[] args) {
+    public void setCommandLine(Map<String, String> args) {
         commandLine = new HashMap<String, String>();
         commandLine.put(PROP_PORT, DEFAULT_PORT);
         parseCommandLine(args, commandLine);
@@ -127,7 +128,7 @@ public class MainDelegate implements Launcher {
 
         // parse the command line (exit in case of failure)
         if (commandLine == null) {
-            setCommandLine(new String[0]);
+            setCommandLine(new HashMap<String, String>());
         }
 
         // if sling.home was set on the command line, set it in the properties
@@ -150,7 +151,7 @@ public class MainDelegate implements Launcher {
         Logger logger = new Logger();
 
         // Display port number on console, in case HttpService doesn't
-        consoleInfo("HTTP server port: " + commandLine.get(PROP_PORT), null);
+        info("HTTP server port: " + commandLine.get(PROP_PORT), null);
 
         // prevent tons of needless WARN from the framework
         logger.setLogLevel(Logger.LOG_ERROR);
@@ -190,8 +191,7 @@ public class MainDelegate implements Launcher {
             return true;
 
         } catch (BundleException be) {
-            log("Failed to Start OSGi framework");
-            be.printStackTrace(System.err);
+            error("Failed to Start OSGi framework", be);
         }
 
         // we failed to start
@@ -209,25 +209,16 @@ public class MainDelegate implements Launcher {
      * Parses the command line in <code>args</code> and sets appropriate Sling
      * configuration options in the <code>props</code> map.
      */
-    private static void parseCommandLine(String[] args,
+    private static void parseCommandLine(Map<String, String> args,
             Map<String, String> props) {
-        for (int argc = 0; argc < args.length; argc++) {
-            String arg = args[argc];
-            if (arg.startsWith("-")) {
 
-                // require at least another character naming the option
-                if (arg.length() != 2) {
-                    usage("Missing option name", 1);
-                }
-
-                // option argument is following the current option
-                argc++;
-                String value = argc < args.length ? args[argc] : null;
-
-                switch (arg.charAt(1)) {
+        for (Entry<String, String> arg : args.entrySet()) {
+            if (arg.getKey().length() == 1) {
+                String value = arg.getValue();
+                switch (arg.getKey().charAt(0)) {
                     case 'l':
-                        if (value == null) {
-                            usage("Missing log level value", 1);
+                        if (value == arg.getKey()) {
+                            terminate("Missing log level value", 1);
                             continue;
                         }
                         try {
@@ -243,8 +234,8 @@ public class MainDelegate implements Launcher {
                         break;
 
                     case 'f':
-                        if (value == null) {
-                            usage("Missing log file value", 1);
+                        if (value == arg.getKey()) {
+                            terminate("Missing log file value", 1);
                             continue;
                         } else if ("-".equals(value)) {
                             value = "";
@@ -253,16 +244,16 @@ public class MainDelegate implements Launcher {
                         break;
 
                     case 'c':
-                        if (value == null) {
-                            usage("Missing directory value", 1);
+                        if (value == arg.getKey()) {
+                            terminate("Missing directory value", 1);
                             continue;
                         }
                         props.put(SharedConstants.SLING_HOME, value);
                         break;
 
                     case 'p':
-                        if (value == null) {
-                            usage("Missing port value", 1);
+                        if (value == arg.getKey()) {
+                            terminate("Missing port value", 1);
                             continue;
                         }
                         try {
@@ -270,54 +261,26 @@ public class MainDelegate implements Launcher {
                             Integer.parseInt(value);
                             props.put(PROP_PORT, value);
                         } catch (RuntimeException e) {
-                            usage("Bad port: " + value, 1);
+                            terminate("Bad port: " + value, 1);
                         }
                         break;
 
                     case 'a':
-                        if (value == null) {
-                            usage("Missing address value", 1);
+                        if (value == arg.getKey()) {
+                            terminate("Missing address value", 1);
                             continue;
                         }
-                        log("Setting the address to bind to is not supported, binding to 0.0.0.0");
+                        info("Setting the address to bind to is not supported, binding to 0.0.0.0", null);
                         break;
-
-                    case 'h':
-                        usage(null, 0);
 
                     default:
-                        usage("Unrecognized option " + arg, 1);
+                        terminate("Unrecognized option " + arg.getKey(), 1);
                         break;
                 }
+            } else {
+                terminate("Unrecognized option " + arg.getKey(), 1);
             }
         }
-    }
-
-    /** prints a simple usage plus optional error message and exists with code */
-    private static void usage(String message, int code) {
-        if (message != null) {
-            log(message);
-            log("");
-        }
-
-        log("usage: "
-            + MainDelegate.class.getName()
-            + " [ -l loglevel ] [ -f logfile ] [ -c slinghome ] [ -a address ] [ -p port ] [ -h ]");
-
-        log("    -l loglevel   the initial loglevel (0..4, FATAL, ERROR, WARN, INFO, DEBUG)");
-        log("    -f logfile    the log file, \"-\" for stdout (default logs/error.log)");
-        log("    -c slinghome  the sling context directory (default sling)");
-        log("    -a address    the interfact to bind to (use 0.0.0.0 for any) (not supported yet)");
-        log("    -p port       the port to listen to (default 8080)");
-        log("    -h            prints this usage message");
-
-        // exiting now
-        System.exit(code);
-    }
-
-    /** Writes the message to stderr output */
-    private static void log(String message) {
-        System.err.println(message);
     }
 
     /** Converts the loglevel code to a loglevel string name */
@@ -326,7 +289,7 @@ public class MainDelegate implements Launcher {
             return logLevels[level];
         }
 
-        usage("Bad log level: " + level, 1);
+        terminate("Bad log level: " + level, 1);
         return null;
     }
 
@@ -340,7 +303,7 @@ public class MainDelegate implements Launcher {
             }
         }
 
-        usage("Bad log level: " + level, 1);
+        terminate("Bad log level: " + level, 1);
         return null;
     }
 
@@ -357,9 +320,23 @@ public class MainDelegate implements Launcher {
 
     // ---------- console logging
 
+    /** prints a simple usage plus optional error message and exists with code */
+    private static void terminate(String message, int code) {
+        if (message != null) {
+            error(message + " (use -h for more information)", null);
+        }
+
+        System.exit(code);
+    }
+
     // emit an informational message to standard out
-    private static void consoleInfo(String message, Throwable t) {
+    static void info(String message, Throwable t) {
         log(System.out, "*INFO*", message, t);
+    }
+
+    // emit an error message to standard err
+    static void error(String message, Throwable t) {
+        log(System.err, "*ERROR*", message, t);
     }
 
     private static final DateFormat fmt = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss.SSS ");

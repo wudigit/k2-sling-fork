@@ -85,7 +85,6 @@
         <module>bundles/jcr/base</module>
         <module>bundles/jcr/classloader</module>
         <module>bundles/jcr/contentloader</module>
-        <module>bundles/jcr/jackrabbit-api</module>
         <module>bundles/jcr/jackrabbit-server</module>
         <module>bundles/jcr/jackrabbit-usermanager</module>
 		<module>bundles/jcr/jackrabbit-accessmanager</module>
@@ -111,7 +110,6 @@
         <module>bundles/extensions/event</module>
         <module>bundles/extensions/fsresource</module>
         <module>bundles/extensions/httpauth</module>
-        <module>bundles/extensions/i18n</module>
         <module>bundles/extensions/openidauth</module>
         <module>bundles/extensions/threaddump</module>
 

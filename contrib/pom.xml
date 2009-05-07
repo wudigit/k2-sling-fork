@@ -65,8 +65,10 @@
           <module>extensions/gwt/sample</module>
           <module>extensions/gwt/servlet</module>
           <module>extensions/jcrinstall</module>
+          <module>extensions/i18n</module>
           <module>extensions/obr</module>
           <module>extensions/runmode</module>
+          <module>jcr/jackrabbit-api</module>
           <module>jcr/jackrabbit-client</module>
           <module>jcr/compiler</module>
           <module>scripting/freemarker</module>
