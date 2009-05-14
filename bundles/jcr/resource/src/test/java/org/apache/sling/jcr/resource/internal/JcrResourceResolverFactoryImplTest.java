@@ -79,13 +79,13 @@ public class JcrResourceResolverFactoryImplTest {
         for(int i=0;i<8;i++) {
             Assert.assertEquals(factory.jcrResourceTypeProviders.get(i).serviceId, ids[i]);
         }
-        Assert.assertEquals(factory.getJcrResourceTypeProvider().length, 8);
+        Assert.assertEquals(factory.getJcrResourceTypeProviders().length, 8);
     }
 
     /**
      * Mock implementation of a service reference.
      */
-    protected final class ServiceReferenceImpl implements ServiceReference {
+    protected static final class ServiceReferenceImpl implements ServiceReference {
 
         protected final Long serviceId;
         protected final Long ranking;

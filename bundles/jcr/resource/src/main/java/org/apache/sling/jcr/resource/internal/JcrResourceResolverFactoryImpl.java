@@ -58,7 +58,7 @@ import org.slf4j.LoggerFactory;
  * descriptors provided by bundles.
  * <li>Fires OSGi EventAdmin events on behalf of internal helper objects
  * </ul>
- * 
+ *
  * @scr.component immediate="true" label="%resource.resolver.name"
  *                description="%resource.resolver.description"
  * @scr.property name="service.description"
@@ -87,11 +87,6 @@ public class JcrResourceResolverFactoryImpl implements
     }
 
     /**
-     * @scr.property value="true" type="Boolean"
-     */
-    private static final String PROP_USE_NEW_RESOLVER = "resource.resolver.new";
-
-    /**
      * @scr.property values.1="/apps" values.2="/libs"
      */
     public static final String PROP_PATH = "resource.resolver.searchpath";
@@ -115,7 +110,7 @@ public class JcrResourceResolverFactoryImpl implements
      * <p>
      * The default value of this property if no configuration is provided is
      * <code>true</code>.
-     * 
+     *
      * @scr.property value="true" type="Boolean"
      */
     private static final String PROP_MANGLE_NAMESPACES = "resource.resolver.manglenamespaces";
@@ -130,7 +125,7 @@ public class JcrResourceResolverFactoryImpl implements
      * maven plugin and the sling management console cannot handle empty
      * multivalue properties at the moment. So we just add a dummy direct
      * mapping.
-     * 
+     *
      * @scr.property values.1="/-/"
      */
     private static final String PROP_VIRTUAL = "resource.resolver.virtual";
@@ -143,28 +138,12 @@ public class JcrResourceResolverFactoryImpl implements
      */
     private static final String PROP_MAPPING = "resource.resolver.mapping";
 
-    /**
-     * These regexps are executing during the resource resolving phase before
-     * the mappings are applied.
-     * 
-     * @scr.property values.1="/_([^/]+?)_|/$1:"
-     */
-    private static final String PROP_REGEXPS = "resource.resolver.regexps";
-
-    /**
-     * These regexps are executed during a map operation as the back conversion
-     * of the {@link #PROP_REGEXPS}
-     * 
-     * @scr.property values.1="/([^/]+?):([^/]+)|/_$1_$2"
-     */
-    private static final String PROP_MAPREGEXPS = "resource.resolver.mapregexps";
-
     /** default log */
     private final Logger log = LoggerFactory.getLogger(getClass());
 
     /**
      * The JCR Repository we access to resolve resources
-     * 
+     *
      * @scr.reference
      */
     private SlingRepository repository;
@@ -190,18 +169,12 @@ public class JcrResourceResolverFactoryImpl implements
 
     // helper for the new JcrResourceResolver2
     private MapEntries mapEntries = MapEntries.EMPTY;
-    
+
     /** all mappings */
     private Mapping[] mappings;
 
     /** The fake urls */
     private BidiMap virtualURLMap;
-
-    /** The regexp patterns */
-    private ResourcePattern[] patterns;
-
-    /** The back regexp patterns */
-    private ResourcePattern[] backPatterns;
 
     /** <code>true</code>, if direct mappings from URI to handle are allowed */
     private boolean allowDirect = false;
@@ -211,18 +184,9 @@ public class JcrResourceResolverFactoryImpl implements
 
     private ResourceProviderEntry rootProviderEntry;
 
-    /**
-     * Temporary field to select which JcrResourceResolver implementation to
-     * use.
-     * 
-     * @see #PROP_USE_NEW_RESOLVER
-     * @see #getResourceResolver(Session)
-     */
-    private boolean useNewResourceResolver;
-
     // whether to mangle paths with namespaces or not
     private boolean mangleNamespacePrefixes;
-    
+
     public JcrResourceResolverFactoryImpl() {
         this.rootProviderEntry = new ResourceProviderEntry("/", null, null);
     }
@@ -235,16 +199,12 @@ public class JcrResourceResolverFactoryImpl implements
      */
     public ResourceResolver getResourceResolver(Session session) {
         JcrResourceProviderEntry sessionRoot = new JcrResourceProviderEntry(
-            session, rootProviderEntry, getJcrResourceTypeProvider());
+            session, rootProviderEntry, getJcrResourceTypeProviders());
 
-        if (useNewResourceResolver) {
-            return new JcrResourceResolver2(sessionRoot, this, mapEntries);
-        }
-
-        return new JcrResourceResolver(sessionRoot, this);
+        return new JcrResourceResolver2(sessionRoot, this, mapEntries);
     }
 
-    protected JcrResourceTypeProvider[] getJcrResourceTypeProvider() {
+    protected JcrResourceTypeProvider[] getJcrResourceTypeProviders() {
         JcrResourceTypeProvider[] providers = null;
         synchronized (this.jcrResourceTypeProviders) {
             if (this.jcrResourceTypeProviders.size() > 0) {
@@ -290,28 +250,20 @@ public class JcrResourceResolverFactoryImpl implements
         return searchPath;
     }
 
-    ResourcePattern[] getPatterns() {
-        return patterns;
-    }
-
-    ResourcePattern[] getBackPatterns() {
-        return backPatterns;
-    }
-
     boolean isMangleNamespacePrefixes() {
         return mangleNamespacePrefixes;
-        
+
     }
-    
+
     MapEntries getMapEntries() {
         return mapEntries;
     }
-    
+
     /**
      * Getter for rootProviderEntry, making it easier to extend
      * JcrResourceResolverFactoryImpl. See <a
      * href="https://issues.apache.org/jira/browse/SLING-730">SLING-730</a>
-     * 
+     *
      * @return Our rootProviderEntry
      */
     protected ResourceProviderEntry getRootProviderEntry() {
@@ -325,20 +277,6 @@ public class JcrResourceResolverFactoryImpl implements
         this.componentContext = componentContext;
 
         Dictionary<?, ?> properties = componentContext.getProperties();
-
-        // BEGIN Temporary solution to select old and new JcrResourceResolver
-        // select new or old resource resolver
-        String propNewRes = componentContext.getBundleContext().getProperty(
-            PROP_USE_NEW_RESOLVER);
-        boolean flagNewRes = !"false".equalsIgnoreCase(propNewRes);
-        useNewResourceResolver = OsgiUtil.toBoolean(
-            properties.get(PROP_USE_NEW_RESOLVER), flagNewRes);
-        if (useNewResourceResolver) {
-            log.info("activate: Using new JCR ResourceResolver with extended Mapping");
-        } else {
-            log.info("activate: Using old JCR ResourceResolver");
-        }
-        // END Temporary solution to select old and new JcrResourceResolver
 
         BidiMap virtuals = new TreeBidiMap();
         String[] virtualList = (String[]) properties.get(PROP_VIRTUAL);
@@ -366,10 +304,6 @@ public class JcrResourceResolverFactoryImpl implements
         } else {
             mappings = tmp;
         }
-
-        // regexps
-        this.patterns = this.getResourcePatterns((String[]) properties.get(PROP_REGEXPS));
-        this.backPatterns = this.getResourcePatterns((String[]) properties.get(PROP_MAPREGEXPS));
 
         // from configuration if available
         searchPath = OsgiUtil.toStringArray(properties.get(PROP_PATH));
@@ -399,30 +333,28 @@ public class JcrResourceResolverFactoryImpl implements
         }
         delayedResourceProviders.clear();
         this.processDelayedJcrResourceTypeProviders();
-        
+
         // set up the map entries from configuration
-        if (useNewResourceResolver) {
-            try {
-                mapEntries = new MapEntries(this, getRepository());
-                plugin = new JcrResourceResolverPlugin(componentContext.getBundleContext(), this);
-            } catch (Exception e) {
-                log.error(
-                    "activate: Cannot access repository, failed setting up Mapping Support",
-                    e);
-            }
+        try {
+            mapEntries = new MapEntries(this, getRepository());
+            plugin = new JcrResourceResolverWebConsolePlugin(componentContext.getBundleContext(), this);
+        } catch (Exception e) {
+            log.error(
+                "activate: Cannot access repository, failed setting up Mapping Support",
+                e);
         }
     }
 
-    private JcrResourceResolverPlugin plugin;
-    
+    private JcrResourceResolverWebConsolePlugin plugin;
+
     /** Deativates this component, called by SCR to take out of service */
     protected void deactivate(ComponentContext componentContext) {
         if (plugin != null) {
             plugin.dispose();
             plugin = null;
         }
-        
-        if (useNewResourceResolver) {
+
+        if (mapEntries != null) {
             mapEntries.dispose();
             mapEntries = MapEntries.EMPTY;
         }
@@ -490,12 +422,20 @@ public class JcrResourceResolverFactoryImpl implements
     }
 
     protected void bindResourceProvider(ServiceReference reference) {
+        
+        String serviceName = getServiceName(reference);
+        
         if (componentContext == null) {
+
+            log.debug("bindResourceProvider: Delaying {}", serviceName);
 
             // delay binding resource providers if called before activation
             delayedResourceProviders.add(reference);
 
         } else {
+            
+            log.debug("bindResourceProvider: Binding {}", serviceName);
+            
             String[] roots = OsgiUtil.toStringArray(reference.getProperty(ResourceProvider.ROOTS));
             if (roots != null && roots.length > 0) {
 
@@ -515,6 +455,9 @@ public class JcrResourceResolverFactoryImpl implements
                         try {
                             rootProviderEntry.addResourceProvider(root,
                                 provider);
+
+                            log.debug("bindResourceProvider: {}={} ({})",
+                                new Object[] { root, provider, serviceName });
                         } catch (ResourceProviderEntryException rpee) {
                             log.error(
                                 "bindResourceProvider: Cannot register ResourceProvider {} for {}: ResourceProvider {} is already registered",
@@ -524,17 +467,24 @@ public class JcrResourceResolverFactoryImpl implements
                     }
                 }
             }
+            
+            log.debug("bindResourceProvider: Bound {}", serviceName);
         }
     }
 
     protected void unbindResourceProvider(ServiceReference reference) {
+
+        String serviceName = getServiceName(reference);
+        
+        log.debug("unbindResourceProvider: Unbinding {}", serviceName);
+
         String[] roots = OsgiUtil.toStringArray(reference.getProperty(ResourceProvider.ROOTS));
         if (roots != null && roots.length > 0) {
 
             // synchronized insertion of new resource providers into
             // the tree to not inadvertandly loose an entry
             synchronized (this) {
-            
+
                 for (String root : roots) {
                     // cut off trailing slash
                     if (root.endsWith("/") && root.length() > 1) {
@@ -545,9 +495,14 @@ public class JcrResourceResolverFactoryImpl implements
                     // owns it. This may be the case if adding the provider
                     // yielded an ResourceProviderEntryException
                     rootProviderEntry.removeResourceProvider(root);
+                    
+                    log.debug("unbindResourceProvider: root={} ({})", root,
+                        serviceName);
                 }
             }
         }
+        
+        log.debug("unbindResourceProvider: Unbound {}", serviceName);
     }
 
     protected void bindJcrResourceTypeProvider(ServiceReference reference) {
@@ -594,5 +549,19 @@ public class JcrResourceResolverFactoryImpl implements
             this.ranking = ranking;
             this.provider = p;
         }
+    }
+    
+    private String getServiceName(ServiceReference reference) {
+        if (log.isDebugEnabled()) {
+            StringBuilder snBuilder = new StringBuilder(64);
+            snBuilder.append('{');
+            snBuilder.append(reference.toString());
+            snBuilder.append('/');
+            snBuilder.append(reference.getProperty(Constants.SERVICE_ID));
+            snBuilder.append('}');
+            return snBuilder.toString();
+        }
+
+        return null;
     }
 }

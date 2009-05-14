@@ -43,6 +43,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceUtil;
+import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.jcr.api.SlingRepository;
 import org.apache.sling.jcr.resource.internal.JcrResourceResolver2;
 import org.apache.sling.jcr.resource.internal.JcrResourceResolverFactoryImpl;
@@ -72,8 +73,6 @@ public class MapEntries implements EventListener {
 
     private Collection<MapEntry> mapMaps;
 
-    private Set<String> namespaces;
-
     private boolean initializing = false;
 
     private MapEntries() {
@@ -83,7 +82,6 @@ public class MapEntries implements EventListener {
 
         resolveMaps = Collections.<MapEntry> emptyList();
         mapMaps = Collections.<MapEntry> emptyList();
-        namespaces = Collections.<String> emptySet();
     }
 
     public MapEntries(JcrResourceResolverFactoryImpl factory,
@@ -193,23 +191,6 @@ public class MapEntries implements EventListener {
         return mapMaps;
     }
 
-    public Set<String> getNamespacePrefixes() {
-        if (namespaces == null) {
-
-            // get the current set of namespaces, we cache throughout our
-            // life time..
-            String[] namespaceList;
-            try {
-                namespaceList = getSession().getNamespacePrefixes();
-            } catch (RepositoryException re) {
-                namespaceList = new String[0];
-            }
-
-            namespaces = new HashSet<String>(Arrays.asList(namespaceList));
-        }
-        return namespaces;
-    }
-
     public Session getSession() {
         return session;
     }
@@ -307,32 +288,34 @@ public class MapEntries implements EventListener {
         // sling:VanityPath (uppercase V) is the mixin name
         // sling:vanityPath (lowercase) is the property name
         final String queryString = "SELECT sling:vanityPath, sling:redirect FROM sling:VanityPath WHERE sling:vanityPath IS NOT NULL ORDER BY sling:vanityOrder DESC";
-        final Iterator<Map<String, Object>> i = resolver.queryResources(
+        final Iterator<Resource> i = resolver.findResources(
             queryString, Query.SQL);
         while (i.hasNext()) {
-            Map<String, Object> row = i.next();
+            Resource resource = i.next();
+            ValueMap row = resource.adaptTo(ValueMap.class);
+            if (row == null) {
+                continue;
+            }
 
             // url is ignoring scheme and host.port and the path is
             // what is stored in the sling:vanityPath property
-            Object pVanityPath = row.get("sling:vanityPath");
-            if (pVanityPath != null) {
+            String[] pVanityPaths = row.get("sling:vanityPath", new String[0]);
+            for (String pVanityPath : pVanityPaths) {
                 String url = "^" + ANY_SCHEME_HOST
                     + String.valueOf(pVanityPath);
 
                 // redirect target is the node providing the sling:vanityPath
                 // property (or its parent if the node is called jcr:content)
-                String redirect = String.valueOf(row.get("jcr:path"));
+                String redirect = resource.getPath();
                 if (ResourceUtil.getName(redirect).equals("jcr:content")) {
                     redirect = ResourceUtil.getParent(redirect);
                 }
 
                 // whether the target is attained by a 302/FOUND or by an
                 // internal redirect is defined by the sling:redirect property
-                int status = -1;
-                if (row.containsKey("sling:redirect")
-                    && Boolean.valueOf(String.valueOf(row.get("sling:redirect")))) {
-                    status = HttpServletResponse.SC_FOUND;
-                }
+                int status = row.get("sling:redirect", false)
+                        ? HttpServletResponse.SC_FOUND
+                        : -1;
 
                 // 1. entry with exact match
                 entries.add(new MapEntry(url + "$", redirect + ".html", status,

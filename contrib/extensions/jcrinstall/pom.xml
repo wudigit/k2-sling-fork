@@ -20,7 +20,7 @@
 	<parent>
 		<groupId>org.apache.sling</groupId>
 		<artifactId>sling</artifactId>
-		<version>5-incubator-SNAPSHOT</version>
+		<version>6-incubator-SNAPSHOT</version>
 		<relativePath>../../../parent/</relativePath>
 	</parent>
 	
@@ -39,6 +39,7 @@
 	<modules>
 		<module>service</module>
 		<module>servlet</module>
+		<module>osgiworker</module>
 		<module>testbundles/observer</module>
 	</modules>
 </project>
