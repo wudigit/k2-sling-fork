@@ -218,6 +218,9 @@ public class CreateUserServlet extends AbstractUserPostServlet {
 		        // write content from form
 		        writeContent(selfRegSession, user, reqProperties, changes);
 				
+            fireCreateEvent(selfRegSession, request,user,changes);
+
+		        
 				if (selfRegSession.hasPendingChanges()) {
 					selfRegSession.save();
 				}
