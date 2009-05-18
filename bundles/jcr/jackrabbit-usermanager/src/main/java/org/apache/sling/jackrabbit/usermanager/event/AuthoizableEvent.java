@@ -37,7 +37,7 @@ public class AuthoizableEvent extends Event {
   /**
    * The topic that the event is fired on.
    */
-  public static final String TOPIC = AuthoizableEvent.class.getName();
+  public static final String TOPIC = AuthoizableEvent.class.getName().replace('.', '/');
   /**
    * Key for the operation.
    */
@@ -67,6 +67,7 @@ public class AuthoizableEvent extends Event {
   public AuthoizableEvent(String arg0, Dictionary arg1) {
     super(arg0, arg1);
   }
+
 
   /**
    * Constructor 

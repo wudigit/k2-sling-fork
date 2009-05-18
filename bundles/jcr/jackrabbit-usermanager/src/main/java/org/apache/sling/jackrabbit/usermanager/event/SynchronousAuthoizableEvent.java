@@ -38,7 +38,7 @@ public class SynchronousAuthoizableEvent extends AuthoizableEvent {
   /**
    * The topic that the event is sent as.
    */
-  public static final String TOPIC = SynchronousAuthoizableEvent.class.getName();
+  public static final String TOPIC = SynchronousAuthoizableEvent.class.getName().replace('.', '/');;
   /**
    * The session performing modifications.
    */
