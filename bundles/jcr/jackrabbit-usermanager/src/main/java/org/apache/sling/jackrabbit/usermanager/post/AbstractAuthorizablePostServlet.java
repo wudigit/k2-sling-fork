@@ -17,27 +17,6 @@
 package org.apache.sling.jackrabbit.usermanager.post;
 
 
-import org.apache.jackrabbit.api.security.user.Authorizable;
-import org.apache.sling.api.SlingHttpServletRequest;
-import org.apache.sling.api.SlingHttpServletResponse;
-import org.apache.sling.api.request.RequestParameter;
-import org.apache.sling.api.resource.ResourceNotFoundException;
-import org.apache.sling.api.resource.ResourceUtil;
-import org.apache.sling.api.servlets.HtmlResponse;
-import org.apache.sling.api.servlets.SlingAllMethodsServlet;
-import org.apache.sling.api.wrappers.SlingRequestPaths;
-import org.apache.sling.commons.osgi.OsgiUtil;
-import org.apache.sling.jackrabbit.usermanager.api.event.AuthorizableEventUtil;
-import org.apache.sling.jackrabbit.usermanager.api.event.AuthorizableEvent.Operation;
-import org.apache.sling.jackrabbit.usermanager.post.impl.DateParser;
-import org.apache.sling.jackrabbit.usermanager.post.impl.RequestProperty;
-import org.apache.sling.jackrabbit.usermanager.resource.AuthorizableResourceProvider;
-import org.apache.sling.servlets.post.Modification;
-import org.apache.sling.servlets.post.SlingPostConstants;
-import org.osgi.service.component.ComponentContext;
-import org.osgi.service.event.EventAdmin;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -59,6 +38,28 @@ import javax.jcr.ValueFactory;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import org.apache.jackrabbit.api.security.user.Authorizable;
+import org.apache.sling.api.SlingHttpServletRequest;
+import org.apache.sling.api.SlingHttpServletResponse;
+import org.apache.sling.api.request.RequestParameter;
+import org.apache.sling.api.resource.ResourceNotFoundException;
+import org.apache.sling.api.resource.ResourceUtil;
+import org.apache.sling.api.servlets.HtmlResponse;
+import org.apache.sling.api.servlets.SlingAllMethodsServlet;
+import org.apache.sling.api.wrappers.SlingRequestPaths;
+import org.apache.sling.commons.osgi.OsgiUtil;
+import org.apache.sling.jackrabbit.usermanager.api.event.AuthorizableEventUtil;
+import org.apache.sling.jackrabbit.usermanager.api.event.AuthorizableEvent.Operation;
+import org.apache.sling.jackrabbit.usermanager.post.impl.DateParser;
+import org.apache.sling.jackrabbit.usermanager.post.impl.RequestProperty;
+import org.apache.sling.jackrabbit.usermanager.resource.AuthorizableResourceProvider;
+import org.apache.sling.servlets.post.Modification;
+import org.apache.sling.servlets.post.SlingPostConstants;
+import org.osgi.service.component.ComponentContext;
+import org.osgi.service.event.EventAdmin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Base class for all the POST servlets for the UserManager operations 
