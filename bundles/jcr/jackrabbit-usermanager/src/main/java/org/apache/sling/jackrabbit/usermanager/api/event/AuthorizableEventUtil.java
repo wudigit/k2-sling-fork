@@ -49,12 +49,17 @@ public class AuthorizableEventUtil {
    *           in a Principal cannot be resolved.
    */
   public static Event newAuthorizableEvent(Operation operation,
-      Authorizable authorizable, 
-      List<Modification> changes) throws RepositoryException {
+      Authorizable authorizable, List<Modification> changes) throws RepositoryException {
     Dictionary<String, Object> eventDictionary = new Hashtable<String, Object>();
-    eventDictionary.put(AuthorizableEvent.OPERATION, operation);
-    eventDictionary.put(AuthorizableEvent.PRINCIPAL, authorizable.getPrincipal());
-    eventDictionary.put(AuthorizableEvent.CHANGES, changes);
+    if (operation != null) {
+      eventDictionary.put(AuthorizableEvent.OPERATION, operation);
+    }
+    if (authorizable != null && authorizable.getPrincipal() != null) {
+      eventDictionary.put(AuthorizableEvent.PRINCIPAL, authorizable.getPrincipal());
+    }
+    if (changes != null) {
+      eventDictionary.put(AuthorizableEvent.CHANGES, changes);
+    }
     return new Event(operation.getTopic(), eventDictionary);
   }
 
@@ -64,24 +69,41 @@ public class AuthorizableEventUtil {
    * JCR. The OSGi container should be configured to restrict the propagation of this
    * event to those listeners that are trusted to receive this event.
    * 
-   * @param operation the operation that was performed.
-   * @param session the session used to perform the operation.
-   * @param request the request that caused the operation.
-   * @param authorizable the authorizable object on which the operation was performed.
-   * @param changes a list of modification changes.
+   * @param operation
+   *          the operation that was performed.
+   * @param session
+   *          the session used to perform the operation.
+   * @param request
+   *          the request that caused the operation.
+   * @param authorizable
+   *          the authorizable object on which the operation was performed.
+   * @param changes
+   *          a list of modification changes.
    * @throws RepositoryException
    */
   public static Event newAuthorizableEvent(Operation operation, Session session,
       SlingHttpServletRequest request, Authorizable authorizable,
       List<Modification> changes) throws RepositoryException {
     Dictionary<String, Object> eventDictionary = new Hashtable<String, Object>();
-    eventDictionary.put(AuthorizableEvent.OPERATION, operation);
-    eventDictionary.put(AuthorizableEvent.PRINCIPAL, authorizable.getPrincipal());
-    eventDictionary.put(AuthorizableEvent.CHANGES, changes);
-    eventDictionary.put(AuthorizableEvent.SESSION, session);
-    eventDictionary.put(AuthorizableEvent.AUTHORIZABLE, authorizable);
-    eventDictionary.put(AuthorizableEvent.REQUEST, request);
+    if (operation != null) {
+      eventDictionary.put(AuthorizableEvent.OPERATION, operation);
+    }
+    if (authorizable != null && authorizable.getPrincipal() != null) {
+      eventDictionary.put(AuthorizableEvent.PRINCIPAL, authorizable.getPrincipal());
+    }
+    if (changes != null) {
+      eventDictionary.put(AuthorizableEvent.CHANGES, changes);
+    }
+    if (session != null) {
+      eventDictionary.put(AuthorizableEvent.SESSION, session);
+    }
+    if (authorizable != null) {
+      eventDictionary.put(AuthorizableEvent.AUTHORIZABLE, authorizable);
+    }
+    if (request != null) {
+      eventDictionary.put(AuthorizableEvent.REQUEST, request);
+    }
     return new Event(operation.getSyncTopic(), eventDictionary);
   }
-  
+
 }
