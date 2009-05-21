@@ -109,13 +109,15 @@ public class UpdateGroupServlet extends AbstractGroupPostServlet {
 				
 	        // write content from form
 	        writeContent(session, authorizable, reqProperties, changes);
-	        
+	     
 	        //update the group memberships
 			if (authorizable.isGroup()) {
 		        updateGroupMembership(request, authorizable, changes);
 			}
+      fireUpdateEvent(session, authorizable, request,changes);
 		} catch (RepositoryException re) {
 			throw new RepositoryException("Failed to update group.", re);
 		}
 	}
+
 }

@@ -109,6 +109,8 @@ public class UpdateUserServlet extends AbstractUserPostServlet {
 				
 	        // write content from form
 	        writeContent(session, authorizable, reqProperties, changes);
+	        
+	        fireUpdateEvent(session, authorizable, request,changes);
 
 		} catch (RepositoryException re) {
 			throw new RepositoryException("Failed to update user.", re);

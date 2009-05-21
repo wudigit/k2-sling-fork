@@ -23,7 +23,7 @@
 	<parent>
 		<groupId>org.apache.sling</groupId>
 		<artifactId>sling</artifactId>
-        <version>6-incubator-SNAPSHOT</version>
+        <version>5-incubator</version>
 		<relativePath>../../../parent/pom.xml</relativePath>
 	</parent>
 
@@ -38,14 +38,14 @@
 
 	<scm>
 		<connection>
-			scm:svn:http://svn.apache.org/repos/asf/incubator/sling/trunk/bundles/jcr/jackrabbit-usermanager
-		</connection>
+                scm:svn:http://svn.apache.org/repos/asf/incubator/sling/trunk/bundles/jcr/jackrabbit-usermanager
+        </connection>
 		<developerConnection>
-			scm:svn:https://svn.apache.org/repos/asf/incubator/sling/trunk/bundles/jcr/jackrabbit-usermanager
-		</developerConnection>
+                scm:svn:https://svn.apache.org/repos/asf/incubator/sling/trunk/bundles/jcr/jackrabbit-usermanager
+        </developerConnection>
 		<url>
-			http://svn.apache.org/viewvc/incubator/sling/trunk/bundles/jcr/jackrabbit-usermanager
-		</url>
+                http://svn.apache.org/viewvc/incubator/sling/trunk/bundles/jcr/jackrabbit-usermanager
+        </url>
 	</scm>
 
 	<build>
@@ -60,8 +60,10 @@
 				<extensions>true</extensions>
 				<configuration>
 					<instructions>
+                        <Export-Package> org.apache.sling.jackrabbit.usermanager.api.event </Export-Package>
 						<Private-Package>
-                            org.apache.sling.jackrabbit.usermanager.*
+                            org.apache.sling.jackrabbit.usermanager.post.*,
+                            org.apache.sling.jackrabbit.usermanager.resource,
 						</Private-Package>
 						<Sling-Initial-Content />
 						<Sling-Nodetypes />

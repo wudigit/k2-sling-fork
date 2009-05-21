@@ -130,9 +130,12 @@ public class CreateGroupServlet extends AbstractGroupPostServlet {
 		        
 		        //update the group memberships
 		        updateGroupMembership(request, group, changes);
+		        
+		        fireCreateEvent(session, request,group,changes);
 			}
 		} catch (RepositoryException re) {
 			throw new RepositoryException("Failed to create new group.", re);
 		}
 	}
+
 }
