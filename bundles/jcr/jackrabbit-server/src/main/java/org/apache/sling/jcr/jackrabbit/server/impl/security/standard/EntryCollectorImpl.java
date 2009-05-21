@@ -59,7 +59,7 @@ public class EntryCollectorImpl implements EntryCollector {
    *          matching the principal names.
    * @throws RepositoryException
    */
-  public void collectEntries(Session session, NodeImpl aclNode,
+  public void collectEntries(NodeImpl aclNode,
       Map<String, List<AccessControlEntry>> princToEntries) throws RepositoryException {
     SessionImpl sImpl = (SessionImpl) aclNode.getSession();
     PrincipalManager principalMgr = sImpl.getPrincipalManager();
@@ -73,7 +73,7 @@ public class EntryCollectorImpl implements EntryCollector {
       // only process aceNode if 'principalName' is contained in the given set
       // or the dynamicPrincialManager says the user has the principal.
 
-      if (hasPrincipal(session, principalName, aclNode, princToEntries)) {
+      if (hasPrincipal(principalName, aclNode, princToEntries)) {
         Principal princ = principalMgr.getPrincipal(principalName);
 
         Value[] privValues = aceNode.getProperty(AccessControlConstants.P_PRIVILEGES)
@@ -108,7 +108,7 @@ public class EntryCollectorImpl implements EntryCollector {
    * @param princToEntries the processed ACE map.
    * @return true if the user has the principal.
    */
-  protected boolean hasPrincipal(Session session, String principalName, NodeImpl aclNode,
+  protected boolean hasPrincipal(String principalName, NodeImpl aclNode,
       Map<String, List<AccessControlEntry>> princToEntries) {
     return princToEntries.containsKey(principalName);
   }

@@ -41,7 +41,7 @@ public interface EntryCollector {
    * @param principalNamesToEntries
    * @throws RepositoryException
    */
-  void collectEntries(Session session, NodeImpl aclNode,
+  void collectEntries(NodeImpl aclNode,
       Map<String, List<AccessControlEntry>> principalNamesToEntries)
       throws RepositoryException;
 

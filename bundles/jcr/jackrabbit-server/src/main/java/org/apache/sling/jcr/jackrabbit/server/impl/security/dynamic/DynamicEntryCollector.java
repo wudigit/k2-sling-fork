@@ -67,9 +67,9 @@ public class DynamicEntryCollector extends EntryCollectorImpl {
    *      org.apache.jackrabbit.core.NodeImpl, java.util.Map)
    */
   @Override
-  protected boolean hasPrincipal(Session session, String principalName, NodeImpl aclNode,
+  protected boolean hasPrincipal(String principalName, NodeImpl aclNode,
       Map<String, List<AccessControlEntry>> princToEntries) {
-    if (super.hasPrincipal(session, principalName, aclNode, princToEntries)) {
+    if (super.hasPrincipal(principalName, aclNode, princToEntries)) {
       return true;
     }
     /*
@@ -83,6 +83,7 @@ public class DynamicEntryCollector extends EntryCollectorImpl {
       LOG.debug("Principal " + principalName + " is cached static - not resolving dynamically");
       return false;
     }
+    Session session = aclNode.getSession();
     if (session instanceof JackrabbitSession) {
       JackrabbitSession jcrSession = (JackrabbitSession) session;
       try {
