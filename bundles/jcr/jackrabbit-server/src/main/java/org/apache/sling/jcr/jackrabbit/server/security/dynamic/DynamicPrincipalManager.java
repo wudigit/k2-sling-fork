@@ -29,10 +29,9 @@ public interface DynamicPrincipalManager {
    * 
    * @param principalName
    *          the name of the principal
-   * @param node
-   *          the node where the test is being performed.
+   * @param aclNode the ACL node associated with the node under test
    * @return true if the user has the principal.
    */
-  boolean hasPrincipalInContext(String principalName, Node node);
+  boolean hasPrincipalInContext(String principalName, Node aclNode);
 
 }
