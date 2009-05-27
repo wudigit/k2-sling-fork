@@ -23,32 +23,45 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Dictionary;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.felix.webconsole.WebConsoleConstants;
 import org.apache.sling.commons.mime.MimeTypeProvider;
 import org.apache.sling.commons.mime.MimeTypeService;
+import org.apache.sling.commons.osgi.OsgiUtil;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleEvent;
 import org.osgi.framework.BundleListener;
+import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.log.LogService;
 
 /**
- * The <code>MimeTypeServiceImpl</code> TODO
- *
- * @scr.component immediate="false" metatype="no"
+ * The <code>MimeTypeServiceImpl</code> is the official implementation of the
+ * {@link MimeTypeService} interface.
+ * 
+ * @scr.component immediate="false" label="%mime.service.name"
+ *                description="%mime.service.description"
  * @scr.property name="service.vendor" value="The Apache Software Foundation"
- * @scr.property name="service.description" value="Sling Servlet"
+ * @scr.property name="service.description"
+ *               value="Apache Sling MIME Type Service"
+ * @scr.service interface="org.apache.sling.commons.mime.MimeTypeService"
  * @scr.reference name="MimeTypeProvider"
  *                interface="org.apache.sling.commons.mime.MimeTypeProvider"
  *                cardinality="0..n" policy="dynamic"
- * @scr.service interface="org.apache.sling.commons.mime.MimeTypeService"
  */
 public class MimeTypeServiceImpl implements MimeTypeService, BundleListener {
 
+    public static final String CORE_MIME_TYPES = "/META-INF/core_mime.types";
+
     public static final String MIME_TYPES = "/META-INF/mime.types";
+
+    /** @scr.property cardinality="-2147483647" type="String" */
+    private static final String PROP_MIME_TYPES = "mime.types";
 
     /** @scr.reference cardinality="0..1" policy="dynamic" */
     private LogService logService;
@@ -61,9 +74,12 @@ public class MimeTypeServiceImpl implements MimeTypeService, BundleListener {
 
     private List<MimeTypeProvider> typeProviderList = new ArrayList<MimeTypeProvider>();
 
-    /**
-     * @see org.apache.sling.commons.mime.MimeTypeService#getMimeType(java.lang.String)
-     */
+    private MimeTypeWebConsolePlugin webConsolePlugin;
+
+    private ServiceRegistration webConsolePluginService;
+
+    // --------- MimeTypeService interface
+
     public String getMimeType(String name) {
         if (name == null) {
             return null;
@@ -83,9 +99,6 @@ public class MimeTypeServiceImpl implements MimeTypeService, BundleListener {
         return type;
     }
 
-    /**
-     * @see org.apache.sling.commons.mime.MimeTypeService#getExtension(java.lang.String)
-     */
     public String getExtension(String mimeType) {
         if (mimeType == null) {
             return null;
@@ -112,16 +125,33 @@ public class MimeTypeServiceImpl implements MimeTypeService, BundleListener {
 
         mimeType = mimeType.toLowerCase();
 
-        String defaultExtension = null;
-        for (int i = 0; i < extensions.length; i++) {
-            if (extensions[i] != null && extensions[i].length() > 0) {
-                extensions[i] = extensions[i].toLowerCase();
+        String defaultExtension = extensionMap.get(mimeType);
 
-                this.mimeTab.put(extensions[i], mimeType);
+        for (String extension : extensions) {
+            if (extension != null && extension.length() > 0) {
+                extension = extension.toLowerCase();
 
-                if (defaultExtension == null) {
-                    defaultExtension = extensions[i];
+                String oldMimeType = mimeTab.get(extension);
+                if (oldMimeType == null) {
+
+                    log(LogService.LOG_DEBUG, "registerMimeType: Add mapping "
+                        + extension + "=" + mimeType, null);
+
+                    this.mimeTab.put(extension, mimeType);
+
+                    if (defaultExtension == null) {
+                        defaultExtension = extension;
+                    }
+
+                } else {
+
+                    log(LogService.LOG_INFO,
+                        "registerMimeType: Ignoring mapping " + extension + "="
+                            + mimeType + ": Mapping " + extension + "="
+                            + oldMimeType + " alread exists", null);
+
                 }
+
             }
         }
 
@@ -142,13 +172,99 @@ public class MimeTypeServiceImpl implements MimeTypeService, BundleListener {
                 continue;
             }
 
-            String[] parts = line.split("\\s+");
-            if (parts.length > 1) {
-                String[] extensions = new String[parts.length - 1];
-                System.arraycopy(parts, 1, extensions, 0, extensions.length);
-                this.registerMimeType(parts[0], extensions);
+            registerMimeType(line);
+        }
+    }
+
+    // ---------- SCR implementation -------------------------------------------
+
+    protected void activate(ComponentContext context) {
+        context.getBundleContext().addBundleListener(this);
+
+        // register core and default sling mime types
+        Bundle bundle = context.getBundleContext().getBundle();
+        registerMimeType(bundle.getEntry(CORE_MIME_TYPES));
+        registerMimeType(bundle.getEntry(MIME_TYPES));
+
+        // register maps of existing bundles
+        Bundle[] bundles = context.getBundleContext().getBundles();
+        for (int i = 0; i < bundles.length; i++) {
+            if ((bundles[i].getState() & (Bundle.RESOLVED | Bundle.STARTING
+                | Bundle.ACTIVE | Bundle.STOPPING)) != 0
+                && bundles[i].getBundleId() != bundle.getBundleId()) {
+                this.registerMimeType(bundles[i].getEntry(MIME_TYPES));
             }
         }
+
+        // register configuration properties
+        String[] configTypes = OsgiUtil.toStringArray(context.getProperties().get(
+            PROP_MIME_TYPES));
+        if (configTypes != null) {
+            for (String configType : configTypes) {
+                registerMimeType(configType);
+            }
+        }
+
+        try {
+            MimeTypeWebConsolePlugin plugin = new MimeTypeWebConsolePlugin(this);
+            plugin.activate(context.getBundleContext());
+
+            Dictionary<String, String> props = new Hashtable<String, String>();
+            props.put(WebConsoleConstants.PLUGIN_LABEL, plugin.getLabel());
+
+            webConsolePluginService = context.getBundleContext().registerService(
+                WebConsoleConstants.SERVICE_NAME, plugin, props);
+            webConsolePlugin = plugin;
+        } catch (Throwable t) {
+            // don't care, we thus don't have the console plugin
+        }
+    }
+
+    protected void deactivate(ComponentContext context) {
+        context.getBundleContext().removeBundleListener(this);
+
+        if (webConsolePluginService != null) {
+            webConsolePluginService.unregister();
+            webConsolePluginService = null;
+
+        }
+
+        if (webConsolePlugin != null) {
+            webConsolePlugin.deactivate();
+            webConsolePlugin = null;
+        }
+    }
+
+    protected void bindMimeTypeProvider(MimeTypeProvider mimeTypeProvider) {
+        synchronized (this.typeProviderList) {
+            this.typeProviderList.add(mimeTypeProvider);
+            this.typeProviders = null;
+        }
+    }
+
+    protected void unbindMimeTypeProvider(MimeTypeProvider mimeTypeProvider) {
+        synchronized (this.typeProviderList) {
+            this.typeProviderList.remove(mimeTypeProvider);
+            this.typeProviders = null;
+        }
+    }
+
+    // ---------- BundleListener ----------------------------------------------
+
+    public void bundleChanged(BundleEvent event) {
+        if (event.getType() == BundleEvent.RESOLVED) {
+            this.registerMimeType(event.getBundle().getEntry(MIME_TYPES));
+        }
+    }
+
+    // ---------- plugin support -----------------------------------------------
+
+    Map<String, String> getMimeMap() {
+        return mimeTab;
+    }
+
+    Map<String, String> getExtensionMap() {
+        return extensionMap;
     }
 
     // ---------- internal -----------------------------------------------------
@@ -166,17 +282,16 @@ public class MimeTypeServiceImpl implements MimeTypeService, BundleListener {
         return list;
     }
 
-    private void handleBundle(Bundle bundle) {
-        URL mimes = bundle.getEntry(MIME_TYPES);
-        if (mimes != null) {
+    private void registerMimeType(URL mimetypes) {
+        if (mimetypes != null) {
             InputStream ins = null;
             try {
-                ins = mimes.openStream();
+                ins = mimetypes.openStream();
                 this.registerMimeType(ins);
             } catch (IOException ioe) {
                 // log but don't actually care
                 this.log(LogService.LOG_WARNING, "An error occurred reading "
-                    + mimes, ioe);
+                    + mimetypes, ioe);
             } finally {
                 if (ins != null) {
                     try {
@@ -186,6 +301,22 @@ public class MimeTypeServiceImpl implements MimeTypeService, BundleListener {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Splits the <code>line</code> on whitespace an registers the MIME type
+     * mappings provided the line contains more than one whitespace separated
+     * fields.
+     * 
+     * @throws NullPointerException if <code>line</code> is <code>null</code>.
+     */
+    private void registerMimeType(String line) {
+        String[] parts = line.split("\\s+");
+        if (parts.length > 1) {
+            String[] extensions = new String[parts.length - 1];
+            System.arraycopy(parts, 1, extensions, 0, extensions.length);
+            this.registerMimeType(parts[0], extensions);
         }
     }
 
@@ -204,44 +335,4 @@ public class MimeTypeServiceImpl implements MimeTypeService, BundleListener {
         }
     }
 
-    // ---------- SCR implementation -------------------------------------------
-
-    protected void activate(ComponentContext context) {
-        context.getBundleContext().addBundleListener(this);
-
-        // register maps of existing bundles
-        Bundle[] bundles = context.getBundleContext().getBundles();
-        for (int i = 0; i < bundles.length; i++) {
-            if ((bundles[i].getState() & (Bundle.RESOLVED | Bundle.STARTING
-                | Bundle.ACTIVE | Bundle.STOPPING)) != 0) {
-                this.handleBundle(bundles[i]);
-            }
-        }
-    }
-
-    protected void deactivate(ComponentContext context) {
-        context.getBundleContext().removeBundleListener(this);
-    }
-
-    protected void bindMimeTypeProvider(MimeTypeProvider mimeTypeProvider) {
-        synchronized (this.typeProviderList) {
-            this.typeProviderList.add(mimeTypeProvider);
-            this.typeProviders = null;
-        }
-    }
-
-    protected void unbindMimeTypeProvider(MimeTypeProvider mimeTypeProvider) {
-        synchronized (this.typeProviderList) {
-            this.typeProviderList.remove(mimeTypeProvider);
-            this.typeProviders = null;
-        }
-    }
-
-    // ---------- BundleListener -----------------------------------------------
-
-    public void bundleChanged(BundleEvent event) {
-        if (event.getType() == BundleEvent.RESOLVED) {
-            this.handleBundle(event.getBundle());
-        }
-    }
 }

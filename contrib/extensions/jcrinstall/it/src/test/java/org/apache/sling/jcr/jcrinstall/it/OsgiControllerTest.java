@@ -17,22 +17,24 @@
 package org.apache.sling.jcr.jcrinstall.it;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 import static org.ops4j.pax.exam.CoreOptions.felix;
 import static org.ops4j.pax.exam.CoreOptions.mavenBundle;
 import static org.ops4j.pax.exam.CoreOptions.options;
+import static org.ops4j.pax.exam.CoreOptions.provision;
 import static org.ops4j.pax.exam.CoreOptions.waitForFrameworkStartup;
 import static org.ops4j.pax.exam.container.def.PaxRunnerOptions.vmOption;
 
 import java.io.File;
-import java.net.URL;
 import java.util.Dictionary;
 import java.util.Hashtable;
 
-import org.apache.sling.jcr.jcrinstall.osgiworker.DictionaryInstallableData;
-import org.apache.sling.jcr.jcrinstall.osgiworker.InstallableData;
-import org.apache.sling.jcr.jcrinstall.osgiworker.OsgiController;
+import org.apache.sling.osgi.installer.DictionaryInstallableData;
+import org.apache.sling.osgi.installer.OsgiController;
+import org.apache.sling.osgi.installer.OsgiControllerServices;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.Inject;
@@ -47,8 +49,7 @@ import org.osgi.service.cm.ConfigurationAdmin;
 /** Test the OsgiController running in the OSGi framework */
 @RunWith(JUnit4TestRunner.class)
 public class OsgiControllerTest {
-	// TODO System properties don't work as this runs in a separate process
-	public final static String POM_VERSION = System.getProperty("maven.pom.version");
+	public final static String POM_VERSION = System.getProperty("jcrinstall.pom.version");
 	
     @Inject
     protected BundleContext bundleContext;
@@ -63,12 +64,15 @@ public class OsgiControllerTest {
     }
     
     protected Configuration findConfiguration(String pid) throws Exception {
-    	final Configuration[] cfgs = getService(ConfigurationAdmin.class).listConfigurations(null);
-    	if(cfgs != null) {
-	    	for(Configuration cfg : cfgs) {
-	    		if(cfg.getPid().equals(pid)) {
-	    			return cfg;
-	    		}
+    	final ConfigurationAdmin ca = getService(ConfigurationAdmin.class);
+    	if(ca != null) {
+	    	final Configuration[] cfgs = ca.listConfigurations(null);
+	    	if(cfgs != null) {
+		    	for(Configuration cfg : cfgs) {
+		    		if(cfg.getPid().equals(pid)) {
+		    			return cfg;
+		    		}
+		    	}
 	    	}
     	}
     	return null;
@@ -84,12 +88,21 @@ public class OsgiControllerTest {
     }
     
     protected File getTestBundle(String bundleName) {
-    	// TODO there must be a better way...but tests don't run in the project folder
-    	// codebase returns a path like "...sling/contrib/extensions/jcrinstall/it/.$tail..."
-    	final URL codebase = getClass().getProtectionDomain().getCodeSource().getLocation();
-    	String path = codebase.getFile();
-    	path = path.substring(0, path.indexOf(".$"));
-    	return new File(path, "/target/testbundles/" + bundleName);
+    	return new File(System.getProperty("jcrinstall.base.dir"), bundleName);
+    }
+    
+    protected void waitForConfigAdmin(boolean shouldBePresent) throws InterruptedException {
+    	final OsgiControllerServices svc = getService(OsgiControllerServices.class);
+    	final int timeout = 5;
+    	final long waitUntil = System.currentTimeMillis() + (timeout * 1000L);
+    	do {
+    		boolean isPresent = svc.getConfigurationAdmin() != null;
+    		if(isPresent == shouldBePresent) {
+    			return;
+    		}
+    		Thread.sleep(100L);
+    	} while(System.currentTimeMillis() < waitUntil);
+    	fail("ConfigurationAdmin service not available after waiting " + timeout + " seconds");
     }
     
     @Test
@@ -117,40 +130,180 @@ public class OsgiControllerTest {
     }
     
     @Test
-    public void testInstallAndRemoveBundle() throws Exception {
-    	final File testBundle = getTestBundle("org.apache.felix.webconsole-1.2.8.jar");
+    public void testDeferredConfigInstall() throws Exception {
     	
-    	final String symbolicName = "org.apache.felix.webconsole";
-    	final String uri = symbolicName + ".jar";
-    	assertNull("Console bundle must not be present before test", findBundle(symbolicName));
+    	final String cfgName = "org.apache.felix.configadmin";
+    	Bundle configAdmin = null;
+    	for(Bundle b : bundleContext.getBundles()) {
+    		if(b.getSymbolicName().equals(cfgName)) {
+    			configAdmin = b;
+    			break;
+    		}
+    	}
+    	assertNotNull(cfgName + " bundle must be found", configAdmin);
+    	waitForConfigAdmin(true);
     	
     	final OsgiController c = getService(OsgiController.class);
-    	final InstallableData d = new SimpleFileInstallableData(testBundle);
-    	c.scheduleInstallOrUpdate(uri, d);
-    	assertNull("Console bundle must still be absent right after scheduleInstallOrUpdate", findBundle(symbolicName));
-    	c.executeScheduledOperations();
-    	assertNotNull("Console bundle must be present after executeScheduledOperations", findBundle(symbolicName));
+    	final Dictionary<String, Object> cfgData = new Hashtable<String, Object>();
+    	cfgData.put("foo", "bar");
+    	final String cfgPid = getClass().getName() + ".deferred." + System.currentTimeMillis();
+    	assertNull("Config " + cfgPid + " must not be found before test", findConfiguration(cfgPid));
     	
-    	c.scheduleUninstall(uri);
-    	assertNotNull("Console bundle must still be present after scheduleUninstall", findBundle(symbolicName));
+    	c.scheduleInstallOrUpdate(cfgPid, new DictionaryInstallableData(cfgData));
+    	assertNull("Config " + cfgPid + " must not be found right after scheduleInstall", findConfiguration(cfgPid));
+    	
+    	// Config installs must be deferred if ConfigAdmin service is stopped
+    	configAdmin.stop();
+    	waitForConfigAdmin(false);
     	c.executeScheduledOperations();
-    	assertNull("Console bundle must be gone after executeScheduledOperations", findBundle(symbolicName));
+    	configAdmin.start();
+    	waitForConfigAdmin(true);
+    	assertNull("Config " + cfgPid + " must not be installed if ConfigAdmin was stopped", findConfiguration(cfgPid));
+    	
+    	// with configadmin back, executeScheduledOperations must install deferred configs
+    	c.executeScheduledOperations();
+    	assertNotNull("Config " + cfgPid + " must be installed after restarting ConfigAdmin", findConfiguration(cfgPid));
+    	findConfiguration(cfgPid).delete();
+    	assertNull("Config " + cfgPid + " must be gone after test", findConfiguration(cfgPid));
     }
-
+    
+    @Test
+    public void testInstallUpgradeDowngradeBundle() throws Exception {
+    	final String symbolicName = "jcrinstall-testbundle";
+    	final String uri = symbolicName + ".jar";
+    	final String BUNDLE_VERSION = "Bundle-Version";
+    	
+    	assertNull("Test bundle must not be present before test", findBundle(symbolicName));
+    	
+    	// Install first test bundle and check version
+    	long bundleId = 0;
+    	final OsgiController c = getService(OsgiController.class);
+    	{
+        	c.scheduleInstallOrUpdate(uri, new SimpleFileInstallableData(getTestBundle("org.apache.sling.jcr.jcrinstall.it-" + POM_VERSION + "-testbundle-1.1.jar")));
+        	assertNull("Test bundle must be absent right after scheduleInstallOrUpdate", findBundle(symbolicName));
+        	c.executeScheduledOperations();
+        	final Bundle b = findBundle(symbolicName);
+        	bundleId = b.getBundleId();
+        	assertNotNull("Test bundle 1.1 must be found after executeScheduledOperations", b);
+        	assertEquals("Installed bundle must be started", Bundle.ACTIVE, b.getState());
+        	assertEquals("Version must be 1.1", "1.1", b.getHeaders().get(BUNDLE_VERSION));
+    	}
+    	
+    	// Upgrade to later version, verify
+    	{
+        	c.scheduleInstallOrUpdate(uri, new SimpleFileInstallableData(getTestBundle("org.apache.sling.jcr.jcrinstall.it-" + POM_VERSION + "-testbundle-1.2.jar")));
+        	c.executeScheduledOperations();
+        	final Bundle b = findBundle(symbolicName);
+        	assertNotNull("Test bundle 1.2 must be found after executeScheduledOperations", b);
+        	assertEquals("Installed bundle must be started", Bundle.ACTIVE, b.getState());
+        	assertEquals("Version must be 1.2 after upgrade", "1.2", b.getHeaders().get(BUNDLE_VERSION));
+        	assertEquals("Bundle ID must not change after upgrade", bundleId, b.getBundleId());
+    	}
+    	
+    	// Downgrade to lower version, installed bundle must not change
+    	{
+        	c.scheduleInstallOrUpdate(uri, new SimpleFileInstallableData(getTestBundle("org.apache.sling.jcr.jcrinstall.it-" + POM_VERSION + "-testbundle-1.0.jar")));
+        	c.executeScheduledOperations();
+        	final Bundle b = findBundle(symbolicName);
+        	assertNotNull("Test bundle 1.2 must be found after executeScheduledOperations", b);
+        	assertEquals("Installed bundle must be started", Bundle.ACTIVE, b.getState());
+        	assertEquals("Version must be 1.2 after ignored downgrade", "1.2", b.getHeaders().get(BUNDLE_VERSION));
+        	assertEquals("Bundle ID must not change after downgrade", bundleId, b.getBundleId());
+    	}
+    	
+    	// Uninstall
+    	{
+        	c.scheduleUninstall(uri);
+        	c.executeScheduledOperations();
+        	final Bundle b = findBundle(symbolicName);
+        	assertNull("Test bundle 1.2 must be gone", b);
+    	}
+    	
+    	// Install lower version, must work
+    	{
+        	c.scheduleInstallOrUpdate(uri, new SimpleFileInstallableData(getTestBundle("org.apache.sling.jcr.jcrinstall.it-" + POM_VERSION + "-testbundle-1.0.jar")));
+        	c.executeScheduledOperations();
+        	final Bundle b = findBundle(symbolicName);
+        	assertNotNull("Test bundle 1.0 must be found after executeScheduledOperations", b);
+        	assertEquals("Installed bundle must be started", Bundle.ACTIVE, b.getState());
+        	assertEquals("Version must be 1.0 after uninstall and downgrade", "1.0", b.getHeaders().get(BUNDLE_VERSION));
+        	assertFalse("Bundle ID must have changed after uninstall and reinstall", bundleId == b.getBundleId());
+    	}
+    }
+    
+    @Test
+    public void testBundleStatePreserved() throws Exception {
+    	final OsgiController c = getService(OsgiController.class);
+    	
+    	// Install two bundles, one started, one stopped
+    	{
+        	c.scheduleInstallOrUpdate("otherBundleA.jar", 
+        			new SimpleFileInstallableData(getTestBundle("org.apache.sling.jcr.jcrinstall.it-" + POM_VERSION + "-otherBundleA-1.0.jar")));
+        	c.executeScheduledOperations();
+    	}
+    	{
+        	c.scheduleInstallOrUpdate("otherBundleB.jar", 
+        			new SimpleFileInstallableData(getTestBundle("org.apache.sling.jcr.jcrinstall.it-" + POM_VERSION + "-otherBundleB-1.0.jar")));
+        	c.executeScheduledOperations();
+        	findBundle("jcrinstall-otherbundleB").stop();
+    	}
+    	
+    	assertEquals("Bundle A must be started", Bundle.ACTIVE, findBundle("jcrinstall-otherbundleA").getState());
+    	assertEquals("Bundle B must be stopped", Bundle.RESOLVED, findBundle("jcrinstall-otherbundleB").getState());
+    	
+    	// Execute some OsgiController operations
+    	final String symbolicName = "jcrinstall-testbundle";
+    	final String uri = symbolicName + ".jar";
+    	final String BUNDLE_VERSION = "Bundle-Version";
+    	c.scheduleInstallOrUpdate(uri, 
+    			new SimpleFileInstallableData(getTestBundle("org.apache.sling.jcr.jcrinstall.it-" + POM_VERSION + "-testbundle-1.1.jar")));
+    	c.executeScheduledOperations();
+    	c.scheduleInstallOrUpdate(uri, 
+    			new SimpleFileInstallableData(getTestBundle("org.apache.sling.jcr.jcrinstall.it-" + POM_VERSION + "-testbundle-1.2.jar")));
+    	c.executeScheduledOperations();
+    	c.scheduleInstallOrUpdate(uri, 
+    			new SimpleFileInstallableData(getTestBundle("org.apache.sling.jcr.jcrinstall.it-" + POM_VERSION + "-testbundle-1.0.jar")));
+    	c.executeScheduledOperations();
+    	final Bundle b = findBundle(symbolicName);
+    	assertNotNull("Installed bundle must be found", b);
+    	assertEquals("Installed bundle must be started", Bundle.ACTIVE, b.getState());
+    	assertEquals("Version must be 1.2", "1.2", b.getHeaders().get(BUNDLE_VERSION));
+    	
+    	// And check that bundles A and B have kept their states
+    	assertEquals("Bundle A must be started", Bundle.ACTIVE, findBundle("jcrinstall-otherbundleA").getState());
+    	assertEquals("Bundle B must be stopped", Bundle.RESOLVED, findBundle("jcrinstall-otherbundleB").getState());
+    }
 
     @org.ops4j.pax.exam.junit.Configuration
     public static Option[] configuration() {
+    	String vmOpt = "-Djrcinstall.testing";
+    	
+    	// This runs in the VM that runs the build, but the tests run in another one.
+    	// Make all jcrinstall.* system properties available to OSGi framework VM
+    	for(Object o : System.getProperties().keySet()) {
+    		final String key = (String)o;
+    		if(key.startsWith("jcrinstall.")) {
+    			vmOpt += " -D" + key + "=" + System.getProperty(key);
+    		}
+    	}
+
+    	// optional debugging
     	final String paxDebugPort = System.getProperty("pax.exam.debug.port");
-    	final String debugOptions = "-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=" + paxDebugPort; 
+    	if(paxDebugPort != null && paxDebugPort.length() > 0) {
+        	vmOpt += " -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=" + paxDebugPort; 
+    	}
     	
         return options(
-            mavenBundle("org.apache.felix", "org.apache.felix.scr", "1.0.6"),
-            mavenBundle("org.apache.felix", "org.apache.felix.configadmin", "1.0.10"),
-            mavenBundle("org.apache.sling", "org.apache.sling.commons.log", "2.0.2-incubator"),
-        	mavenBundle("org.apache.sling", "org.apache.sling.jcr.jcrinstall.osgiworker", POM_VERSION),
-            felix(),
-            vmOption(paxDebugPort != null && paxDebugPort.length() > 0 ? debugOptions : "-Dno.pax.debugging"),
-            waitForFrameworkStartup()
+                felix(),
+                vmOption(vmOpt),
+                waitForFrameworkStartup(),
+        		provision(
+        				// TODO use latest scr?
+        	            mavenBundle("org.apache.felix", "org.apache.felix.scr"),
+        	            mavenBundle("org.apache.felix", "org.apache.felix.configadmin"),
+        	            mavenBundle("org.apache.sling", "org.apache.sling.commons.log"),
+        	        	mavenBundle("org.apache.sling", "org.apache.sling.osgi.installer", POM_VERSION)
+        		)
         );
     }
 }

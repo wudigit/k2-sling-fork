@@ -20,6 +20,7 @@ import java.io.Serializable;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -62,6 +63,8 @@ public class QuartzScheduler implements Scheduler {
 
     protected static final String THREAD_POOL_NAME = "SLING_SCHEDULER";
 
+    protected static final String QUARTZ_SCHEDULER_NAME = "ApacheSling";
+
     /** Map key for the job object */
     static final String DATA_MAP_OBJECT = "QuartzJobScheduler.Object";
 
@@ -102,7 +105,7 @@ public class QuartzScheduler implements Scheduler {
                 } catch (Exception e) {
                     // we don't want that one malicious service brings down the scheduler, so we just log
                     // the exception and continue
-                    this.logger.error("Exception during registering job service {}.", arr[1], e);
+                    this.logger.error("Exception during registering job service " + arr[1], e);
                 }
             }
             this.registeredJobs.clear();
@@ -128,11 +131,28 @@ public class QuartzScheduler implements Scheduler {
             final SchedulerFactory factory = new StdSchedulerFactory();
             this.scheduler = factory.getScheduler();
         } else {
+            // create the pool
             final ThreadPool pool = tpm.get(THREAD_POOL_NAME);
             final QuartzThreadPool quartzPool = new QuartzThreadPool(pool);
+
             final DirectSchedulerFactory factory = DirectSchedulerFactory.getInstance();
-            factory.createScheduler(quartzPool, new RAMJobStore());
-            this.scheduler = factory.getScheduler();
+            // unique run id
+            final String runID = new Date().toString().replace(' ', '_');
+            factory.createScheduler(QUARTZ_SCHEDULER_NAME, runID, quartzPool, new RAMJobStore());
+            // quartz does not provide a way to get the scheduler by name AND runID, so we have to iterate!
+            @SuppressWarnings("unchecked")
+            final Iterator<org.quartz.Scheduler> allSchedulersIter = factory.getAllSchedulers().iterator();
+            this.scheduler = null;
+            while ( this.scheduler == null && allSchedulersIter.hasNext() ) {
+                final org.quartz.Scheduler current = allSchedulersIter.next();
+                if ( QUARTZ_SCHEDULER_NAME.equals(current.getSchedulerName())
+                     && runID.equals(current.getSchedulerInstanceId()) ) {
+                    this.scheduler = current;
+                }
+            }
+            if ( this.scheduler == null ) {
+                throw new SchedulerException("Unable to find new scheduler with name " + QUARTZ_SCHEDULER_NAME + " and run ID " + runID);
+            }
         }
         this.scheduler.start();
         if ( this.logger.isDebugEnabled() ) {
