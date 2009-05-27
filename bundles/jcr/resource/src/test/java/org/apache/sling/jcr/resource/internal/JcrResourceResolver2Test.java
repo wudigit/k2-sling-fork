@@ -111,7 +111,7 @@ public class JcrResourceResolver2Test extends RepositoryTestBase {
 
         Field mapEntriesField = resFac.getClass().getDeclaredField("mapEntries");
         mapEntriesField.setAccessible(true);
-        mapEntries = new MapEntries(resFac, getRepository());
+        mapEntries = new MapEntries(resFac, getRepository(),null);
         mapEntriesField.set(resFac, mapEntries);
 
         try {

@@ -44,6 +44,7 @@ import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.jcr.api.SlingRepository;
 import org.apache.sling.jcr.resource.internal.JcrResourceResolver2;
 import org.apache.sling.jcr.resource.internal.JcrResourceResolverFactoryImpl;
+import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,6 +73,8 @@ public class MapEntries implements EventListener {
 
     private boolean initializing = false;
 
+    private ComponentContext componentContext;
+
     private MapEntries() {
         session = null; // not needed
         factory = null;
@@ -82,10 +85,11 @@ public class MapEntries implements EventListener {
     }
 
     public MapEntries(JcrResourceResolverFactoryImpl factory,
-            SlingRepository repository) throws RepositoryException {
+            SlingRepository repository, ComponentContext componentContext) throws RepositoryException {
         this.factory = factory;
         this.session = repository.loginAdministrative(null);
         this.resolver = (JcrResourceResolver2) factory.getResourceResolver(session);
+        this.componentContext = componentContext;
 
         init();
 
@@ -269,7 +273,7 @@ public class MapEntries implements EventListener {
 
             // add resolution entries for this node
             MapEntry childResolveEntry = MapEntry.createResolveEntry(childPath,
-                child, trailingSlash);
+                child, trailingSlash, componentContext);
             if (childResolveEntry != null) {
                 resolveEntries.add(childResolveEntry);
             }

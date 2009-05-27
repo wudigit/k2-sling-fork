@@ -82,6 +82,8 @@ public class JcrResourceResolver2 extends SlingAdaptable implements
 
     public static final String PROP_REDIRECT_EXTERNAL_STATUS = "sling:status";
 
+    public static final String PROP_MAPPER = "sling:mapper";
+
     /** default log */
     private final Logger log = LoggerFactory.getLogger(getClass());
 
@@ -141,6 +143,13 @@ public class JcrResourceResolver2 extends SlingAdaptable implements
 
             String[] mappedPath = null;
             for (MapEntry mapEntry : resourceMapper.getResolveMaps()) {
+              if (mapEntry.isDynamic()) {
+                String dynamicMappedPath = mapEntry.resolve(request, requestPath);
+                if (dynamicMappedPath != null) {
+                  mappedPath = new String[] {dynamicMappedPath};
+                  break;
+                }
+              } else {
                 mappedPath = mapEntry.replace(requestPath);
                 if (mappedPath != null) {
                     log.debug(
@@ -157,6 +166,7 @@ public class JcrResourceResolver2 extends SlingAdaptable implements
                     log.debug("resolve: Returning external redirect");
                     return new RedirectResource(this, absPath, mappedPath[0]);
                 }
+              }
             }
 
             // if there is no virtual host based path mapping, abort
@@ -314,6 +324,12 @@ public class JcrResourceResolver2 extends SlingAdaptable implements
         }
 
         for (MapEntry mapEntry : resourceMapper.getMapMaps()) {
+          if ( mapEntry.isDynamic() ) {
+           mappedPath = mapEntry.map(request,mappedPath); 
+           if ( mappedPath != null ) {
+             break;
+           }
+          } else {
             String[] mappedPaths = mapEntry.replace(mappedPath);
             if (mappedPaths != null) {
 
@@ -341,6 +357,7 @@ public class JcrResourceResolver2 extends SlingAdaptable implements
 
                 break;
             }
+          }
         }
 
         // this should not be the case, since mappedPath is primed

@@ -26,9 +26,20 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.servlet.http.HttpServletRequest;
+
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.jcr.resource.internal.JcrResourceResolver2;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.Filter;
+import org.osgi.framework.InvalidSyntaxException;
+import org.osgi.framework.ServiceReference;
+import org.osgi.service.component.ComponentContext;
+import org.osgi.util.tracker.ServiceTracker;
+import org.osgi.util.tracker.ServiceTrackerCustomizer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The <code>MapEntry</code> class represents a mapping entry in the mapping
@@ -47,11 +58,21 @@ public class MapEntry implements Comparable<MapEntry> {
     private static final String[] PATH_TO_URL_REPLACEMENT = { "http://$1$2",
         "https://$1$2", "$1://$2:$3$4" };
 
+    private static final Logger log = LoggerFactory.getLogger(MapEntry.class);
+
     private final Pattern urlPattern;
 
     private final String[] redirect;
 
     private final int status;
+
+    /**
+     * If this service tracker is initialized it will track MapperResolvers for this
+     * MapEntry. If not initialized it can be ignored.
+     */
+    private ServiceTracker tracker;
+
+    protected List<MappingResolver> mappingResolverList = new ArrayList<MappingResolver>();
 
     public static String appendSlash(String path) {
         if (!path.endsWith("/")) {
@@ -103,7 +124,7 @@ public class MapEntry implements Comparable<MapEntry> {
     }
 
     public static MapEntry createResolveEntry(String url, Resource resource,
-            boolean trailingSlash) {
+            boolean trailingSlash, ComponentContext componentContext) {
         ValueMap props = resource.adaptTo(ValueMap.class);
         if (props != null) {
             String redirect = props.get(
@@ -119,7 +140,24 @@ public class MapEntry implements Comparable<MapEntry> {
             if (internalRedirect != null) {
                 return new MapEntry(url, -1, trailingSlash, internalRedirect);
             }
-        }
+            
+            String mapper = props.get(JcrResourceResolver2.PROP_MAPPER, String.class);
+            if (mapper != null) {
+              if ( componentContext != null ) {
+                try {
+                  return new MapEntry(url, -1, trailingSlash, mapper, componentContext);
+                } catch (InvalidSyntaxException e) {
+                  log.warn("Mapper filter {} found at {} is invalid {} ", new Object[] {mapper,
+                      resource.getPath(), e.getMessage()});
+                }
+              } else {
+                log.warn(
+                    "Mapper filter {} found at {} cannot be loaded, no component context ",
+                    new Object[] {mapper, resource.getPath()});
+              }
+            }
+            
+         }
 
         return null;
     }
@@ -172,6 +210,43 @@ public class MapEntry implements Comparable<MapEntry> {
 
         return null;
     }
+    public MapEntry(String url, int status, boolean trailingSlash,
+        String filter, ComponentContext context) throws InvalidSyntaxException {
+      final BundleContext bundleContext = context.getBundleContext();
+      Filter serviceFilter = bundleContext.createFilter("(&(objectclass="+MappingResolver.class+")"+filter+")");
+      // add a service tracker that just looks for the last registered service we are interested in.
+      tracker = new ServiceTracker(bundleContext,serviceFilter,new ServiceTrackerCustomizer(){        
+        public Object addingService(ServiceReference reference) {
+          MappingResolver service = (MappingResolver) bundleContext.getService(reference);
+          synchronized (mappingResolverList) {
+            mappingResolverList.add(service);            
+          }
+          return service;
+        }
+        public void modifiedService(ServiceReference reference, Object service) {    
+        }
+
+        public void removedService(ServiceReference reference, Object service) {
+          synchronized (mappingResolverList) {
+            mappingResolverList.remove(service);
+          }
+        }});
+      // ensure trailing slashes on redirects if the url
+      // ends with a trailing slash
+      if (trailingSlash) {
+          url = appendSlash(url);
+      }
+
+      // ensure pattern is hooked to the start of the string
+      if (!url.startsWith("^")) {
+          url = "^".concat(url);
+      }
+
+      this.urlPattern = Pattern.compile(url);
+      this.redirect = null;
+      this.status = status;
+    }
+    
 
     public MapEntry(String url, int status, boolean trailingSlash,
             String... redirect) {
@@ -197,17 +272,78 @@ public class MapEntry implements Comparable<MapEntry> {
 
     // Returns the replacement or null if the value does not match
     public String[] replace(String value) {
+      if ( !isDynamic() ) {
         Matcher m = urlPattern.matcher(value);
         if (m.find()) {
             String[] redirects = getRedirect();
+            
             String[] results = new String[redirects.length];
             for (int i = 0; i < redirects.length; i++) {
                 results[i] = m.replaceFirst(redirects[i]);
             }
             return results;
         }
+      }
+      return null;
+    }
+    
+  /**
+   * Resolves a request path to an internal path, if this is a dynamic map entry.
+   *
+   * @param request
+   *          the request.
+   * @param requestPath
+   *          the request path.
+   * @return A resolved path if there is a match and the
+   */
+  public String resolve(HttpServletRequest request, String requestPath) {
+    if (isDynamic()) {
+      Matcher m = urlPattern.matcher(requestPath);
+      if (m.find()) {
+        MappingResolver mappingResolver = getMappingResolver();
+        if (mappingResolver != null) {
+          return mappingResolver.resolve(request, requestPath);
+        }
+      }
+    }
+    return null;
+  }
+    
+  /**
+   * Maps an internal path into an external path.
+   *
+   * @param request
+   *          the request object.
+   * @param path
+   *          the internal path.
+   * @return an external path.
+   */
+  public String map(HttpServletRequest request, String path) {
+    if (isDynamic()) {
+      Matcher m = urlPattern.matcher(path);
+      if (m.find()) {
+        MappingResolver mappingResolver = getMappingResolver();
+        if (mappingResolver != null) {
+          return mappingResolver.map(request, path);
+        }
+      }
+    }
+    return null;
+  }
+    
 
+    /**
+     * Gets the current last implementation from the ServiceTracker.
+     * @return the current MapperResolver service implementation, null if there is none.
+     */
+    private MappingResolver getMappingResolver() {
+      synchronized (mappingResolverList) {
+        if ( mappingResolverList.size() > 0 ) {
+          return mappingResolverList.get(mappingResolverList.size()-1);
+        }
+        // no service found, ignore
         return null;
+      }
     }
 
     public String getPattern() {
@@ -220,6 +356,10 @@ public class MapEntry implements Comparable<MapEntry> {
 
     public boolean isInternal() {
         return getStatus() < 0;
+    }
+    
+    public boolean isDynamic() {
+      return (tracker != null);
     }
 
     public int getStatus() {

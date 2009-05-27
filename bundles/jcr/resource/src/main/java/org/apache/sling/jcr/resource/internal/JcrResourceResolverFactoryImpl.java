@@ -336,7 +336,7 @@ public class JcrResourceResolverFactoryImpl implements
 
         // set up the map entries from configuration
         try {
-            mapEntries = new MapEntries(this, getRepository());
+            mapEntries = new MapEntries(this, getRepository(), componentContext);
             plugin = new JcrResourceResolverWebConsolePlugin(componentContext.getBundleContext(), this);
         } catch (Exception e) {
             log.error(
