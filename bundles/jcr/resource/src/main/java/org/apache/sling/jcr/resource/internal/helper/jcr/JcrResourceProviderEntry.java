@@ -35,7 +35,7 @@ public class JcrResourceProviderEntry extends ResourceProviderEntry {
     public JcrResourceProviderEntry(Session session,
                                     ResourceProviderEntry delegatee,
                                     JcrResourceTypeProvider[] resourceTypeProviders) {
-        super("/", new JcrResourceProvider(session, resourceTypeProviders), null);
+        super("/", "", new JcrResourceProvider(session, resourceTypeProviders), null);
 
         this.delegatee = delegatee;
         this.session = session;
@@ -56,12 +56,12 @@ public class JcrResourceProviderEntry extends ResourceProviderEntry {
     }
 
     @Override
-    public boolean addResourceProvider(String prefix, ResourceProvider provider) {
-        return delegatee.addResourceProvider(prefix, provider);
+    public boolean addResourceProvider(String prefix, String classifier, ResourceProvider provider) {
+        return delegatee.addResourceProvider(prefix, classifier, provider);
     }
     
     @Override
-    public boolean removeResourceProvider(String prefix) {
-        return delegatee.removeResourceProvider(prefix);
+    public boolean removeResourceProvider(String prefix, String classifier) {
+        return delegatee.removeResourceProvider(prefix, classifier);
     }
 }

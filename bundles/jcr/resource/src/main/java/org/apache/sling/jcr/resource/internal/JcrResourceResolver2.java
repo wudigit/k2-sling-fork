@@ -684,6 +684,7 @@ public class JcrResourceResolver2 extends SlingAdaptable implements
      */
     protected Resource getResourceInternal(String path) {
 
+        log.info("Attempting to resolve {} ",path);
         Resource resource = rootProvider.getResource(this, path);
         if (resource != null) {
             resource.getResourceMetadata().setResolutionPath(path);
