@@ -57,6 +57,15 @@ public interface ResourceProvider {
      * @see #listChildren(Resource)
      */
     static final String RESOURCE_TYPE_SYNTHETIC = "sling:syntheticResourceProviderResource";
+    
+    
+    /**
+     * The name of the service registration property containing the classifier for the
+     * resource provider, sets of roots may be classified into groups to allow multiple
+     * sets of ResourceProviders to be registered against the same subtree. This is an extension
+     * to Sling to Resource providers to bind to arbritary nodes.
+     */
+    static final String CLASSIFIER = "provider.classifier";
 
     /**
      * Returns a resource from this resource provider or <code>null</code> if
