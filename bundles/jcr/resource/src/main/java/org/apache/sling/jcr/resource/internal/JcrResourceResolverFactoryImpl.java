@@ -72,6 +72,9 @@ import org.slf4j.LoggerFactory;
  * @scr.reference name="JcrResourceTypeProvider"
  *                interface="org.apache.sling.jcr.resource.JcrResourceTypeProvider"
  *                cardinality="0..n" policy="dynamic"
+ * @scr.reference name="PathResourceTypeProvider"
+ *                interface="org.apache.sling.jcr.resource.PathResourceTypeProvider"
+ *                cardinality="0..n" policy="dynamic"
  */
 public class JcrResourceResolverFactoryImpl implements
         JcrResourceResolverFactory {
