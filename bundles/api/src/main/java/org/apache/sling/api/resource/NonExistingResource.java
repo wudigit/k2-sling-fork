@@ -18,14 +18,15 @@
  */
 package org.apache.sling.api.resource;
 
+
 /**
  * Simple helper class representing nonexisting resources.
  */
 public final class NonExistingResource extends SyntheticResource {
 
     public NonExistingResource(ResourceResolver resourceResolver,
-            String resourceURI) {
-        super(resourceResolver, resourceURI, RESOURCE_TYPE_NON_EXISTING);
+            String resourceURI, String resourceType) {
+        super(resourceResolver, resourceURI, resourceType==null?RESOURCE_TYPE_NON_EXISTING:resourceType);
     }
 
     public final String getResourceType() {

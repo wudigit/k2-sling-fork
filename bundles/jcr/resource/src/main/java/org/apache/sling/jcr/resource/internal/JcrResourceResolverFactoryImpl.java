@@ -37,6 +37,7 @@ import org.apache.sling.commons.osgi.OsgiUtil;
 import org.apache.sling.jcr.api.SlingRepository;
 import org.apache.sling.jcr.resource.JcrResourceResolverFactory;
 import org.apache.sling.jcr.resource.JcrResourceTypeProvider;
+import org.apache.sling.jcr.resource.PathResourceTypeProvider;
 import org.apache.sling.jcr.resource.internal.helper.MapEntries;
 import org.apache.sling.jcr.resource.internal.helper.Mapping;
 import org.apache.sling.jcr.resource.internal.helper.ResourceProviderEntry;
@@ -152,6 +153,11 @@ public class JcrResourceResolverFactoryImpl implements
      * The (optional) resource type providers.
      */
     protected final List<JcrResourceTypeProviderEntry> jcrResourceTypeProviders = new ArrayList<JcrResourceTypeProviderEntry>();
+    
+    /**
+     * The (optional) resource type providers.
+     */
+    protected final List<PathResourceTypeProviderEntry> pathResourceTypeProviders = new ArrayList<PathResourceTypeProviderEntry>();
 
     /**
      * List of ResourceProvider services bound before activation of the
@@ -165,6 +171,12 @@ public class JcrResourceResolverFactoryImpl implements
      */
     protected List<ServiceReference> delayedJcrResourceTypeProviders = new LinkedList<ServiceReference>();
 
+    /**
+     * List of PathResourceTypeProvider services bound before activation of the
+     * component.
+     */
+    protected List<ServiceReference> delayedPathResourceTypeProviders = new LinkedList<ServiceReference>();
+    
     protected ComponentContext componentContext;
 
     // helper for the new JcrResourceResolver2
@@ -218,6 +230,25 @@ public class JcrResourceResolverFactoryImpl implements
         }
         return providers;
     }
+    
+    /**
+     * @return
+     */
+    protected PathResourceTypeProvider[] getPathResourceTypeProviders() {
+      PathResourceTypeProvider[] providers = null;
+      synchronized (this.pathResourceTypeProviders) {
+          if (this.pathResourceTypeProviders.size() > 0) {
+              providers = new PathResourceTypeProvider[this.pathResourceTypeProviders.size()];
+              int index = 0;
+              final Iterator<PathResourceTypeProviderEntry> i = this.pathResourceTypeProviders.iterator();
+              while (i.hasNext()) {
+                  providers[index] = i.next().provider;
+              }
+          }
+      }
+      return providers;    
+    }
+
 
     // ---------- Implementation helpers --------------------------------------
 
@@ -333,6 +364,7 @@ public class JcrResourceResolverFactoryImpl implements
         }
         delayedResourceProviders.clear();
         this.processDelayedJcrResourceTypeProviders();
+        this.processDelayedPathResourceTypeProviders();
 
         // set up the map entries from configuration
         try {
@@ -528,6 +560,70 @@ public class JcrResourceResolverFactoryImpl implements
             }
         }
     }
+    
+    
+    protected void processDelayedPathResourceTypeProviders() {
+      synchronized (this.pathResourceTypeProviders) {
+          for (ServiceReference reference : delayedPathResourceTypeProviders) {
+              this.addPathResourceTypeProvider(reference);
+          }
+          delayedPathResourceTypeProviders.clear();
+      }
+  }
+    protected void addPathResourceTypeProvider(final ServiceReference reference) {
+      final Long id = (Long) reference.getProperty(Constants.SERVICE_ID);
+      long ranking = -1;
+      if (reference.getProperty(Constants.SERVICE_RANKING) != null) {
+          ranking = (Long) reference.getProperty(Constants.SERVICE_RANKING);
+      }
+      this.pathResourceTypeProviders.add(new PathResourceTypeProviderEntry(id,
+          ranking,
+          (PathResourceTypeProvider) this.componentContext.locateService(
+              "PathResourceTypeProvider", reference)));
+      Collections.sort(this.pathResourceTypeProviders,
+          new Comparator<PathResourceTypeProviderEntry>() {
+
+              public int compare(PathResourceTypeProviderEntry o1,
+                      PathResourceTypeProviderEntry o2) {
+                  if (o1.ranking < o2.ranking) {
+                      return 1;
+                  } else if (o1.ranking > o2.ranking) {
+                      return -1;
+                  } else {
+                      if (o1.serviceId < o2.serviceId) {
+                          return -1;
+                      } else if (o1.serviceId > o2.serviceId) {
+                          return 1;
+                      }
+                  }
+                  return 0;
+              }
+          });
+
+    }
+    protected void bindPathResourceTypeProvider(ServiceReference reference) {
+      synchronized (this.pathResourceTypeProviders) {
+          if (componentContext == null) {
+              delayedPathResourceTypeProviders.add(reference);
+          } else {
+              this.addPathResourceTypeProvider(reference);
+          }
+      }
+    }
+
+    protected void unbindPathResourceTypeProvider(ServiceReference reference) {
+        synchronized (this.pathResourceTypeProviders) {
+            delayedPathResourceTypeProviders.remove(reference);
+            final long id = (Long) reference.getProperty(Constants.SERVICE_ID);
+            final Iterator<PathResourceTypeProviderEntry> i = this.pathResourceTypeProviders.iterator();
+            while (i.hasNext()) {
+                final PathResourceTypeProviderEntry current = i.next();
+                if (current.serviceId == id) {
+                    i.remove();
+                }
+            }
+        }
+    }
 
     // ---------- internal helper ----------------------------------------------
 
@@ -551,6 +647,21 @@ public class JcrResourceResolverFactoryImpl implements
         }
     }
     
+    protected static final class PathResourceTypeProviderEntry {
+      final long serviceId;
+
+      final long ranking;
+
+      final PathResourceTypeProvider provider;
+
+      public PathResourceTypeProviderEntry(final long id, final long ranking,
+              final PathResourceTypeProvider p) {
+          this.serviceId = id;
+          this.ranking = ranking;
+          this.provider = p;
+      }
+  }
+    
     private String getServiceName(ServiceReference reference) {
         if (log.isDebugEnabled()) {
             StringBuilder snBuilder = new StringBuilder(64);
@@ -564,4 +675,5 @@ public class JcrResourceResolverFactoryImpl implements
 
         return null;
     }
+
 }

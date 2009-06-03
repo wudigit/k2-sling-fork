@@ -47,6 +47,7 @@ import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.jcr.resource.JcrResourceUtil;
+import org.apache.sling.jcr.resource.PathResourceTypeProvider;
 import org.apache.sling.jcr.resource.internal.helper.MapEntries;
 import org.apache.sling.jcr.resource.internal.helper.MapEntry;
 import org.apache.sling.jcr.resource.internal.helper.RedirectResource;
@@ -235,13 +236,15 @@ public class JcrResourceResolver2 extends SlingAdaptable implements
             log.debug(
                 "resolve: Path {} does not resolve, returning NonExistingResource at {}",
                 absPath, realPathList[0]);
-            res = new NonExistingResource(this, ensureAbsPath(realPathList[0]));
+            String absRealPath = ensureAbsPath(realPathList[0]);
+            res = new NonExistingResource(this, absRealPath, getPathResourceType(absRealPath));
         } else {
             log.debug("resolve: Path {} resolves to Resource {}", absPath, res);
         }
 
         return res;
     }
+
 
     // calls map(HttpServletRequest, String) as map(null, resourcePath)
     public String map(String resourcePath) {
@@ -813,4 +816,23 @@ public class JcrResourceResolver2 extends SlingAdaptable implements
 
         return absPath;
     }
+    
+    /**
+     * Gets the resource type from the path consulting providers, returning the first non null match.
+     * @param absRealPath the abs real URI of the respource, that may or may not exist.
+     * @return null if there is no Path based resoruce type, otherwise the first matching resource type.
+     */
+    private String getPathResourceType(String absRealPath) {
+      PathResourceTypeProvider[] pathResourceTypeProviders = factory.getPathResourceTypeProviders();
+      if ( pathResourceTypeProviders != null ) {
+        for ( PathResourceTypeProvider prp : factory.getPathResourceTypeProviders()) {
+          String resourceType = prp.getResourceTypeFromPath(absRealPath);
+          if ( resourceType != null ) {
+            return resourceType;
+          }
+        }
+      }
+      return null;
+    }
+
 }
