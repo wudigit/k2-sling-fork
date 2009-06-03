@@ -237,7 +237,22 @@ public class JcrResourceResolver2 extends SlingAdaptable implements
                 "resolve: Path {} does not resolve, returning NonExistingResource at {}",
                 absPath, realPathList[0]);
             String absRealPath = ensureAbsPath(realPathList[0]);
-            res = new NonExistingResource(this, absRealPath, getPathResourceType(absRealPath));
+            final String resourceType = getPathResourceType(absRealPath);
+            if ( resourceType == null ) {
+            res = new NonExistingResource(this, absRealPath);
+            } else {
+              res = new NonExistingResource(this, absRealPath) {
+                /**
+                 * {@inheritDoc}
+                 * @see org.apache.sling.api.resource.NonExistingResource#getResourceType()
+                 */
+                @Override
+                public String getResourceType() {
+                  return resourceType;
+                }
+              };
+                
+            }
         } else {
             log.debug("resolve: Path {} resolves to Resource {}", absPath, res);
         }
