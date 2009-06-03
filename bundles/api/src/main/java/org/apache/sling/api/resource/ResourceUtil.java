@@ -18,6 +18,7 @@
  */
 package org.apache.sling.api.resource;
 
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -285,16 +286,26 @@ public class ResourceUtil {
      * @param res The <code>Resource</code> to adapt to the value map.
      * @return A value map.
      */
+    @SuppressWarnings("unchecked")
     public static ValueMap getValueMap(final Resource res) {
-        ValueMap map = (res == null ? null : res.adaptTo(ValueMap.class));
-        if ( map == null ) {
-            Map m = res.adaptTo(Map.class);
-            if ( m != null ) {
-                map = new ValueMapDecorator(m);
-            } else {
-                map = ValueMap.EMPTY;
+        // adapt to ValueMap if resource is not null
+        ValueMap valueMap = (res != null)?
+            res.adaptTo(ValueMap.class) : null;
+        
+        // if no resource or no ValueMap adapter, check Map
+        if (valueMap == null) {
+            
+            Map map = (res != null) ? res.adaptTo(Map.class) : null;
+
+            // if not even adapting to map, assume an empty map
+            if (map == null) {
+                map = new HashMap<String, Object>();
             }
+            
+            // .. and decorate the plain map
+            valueMap = new ValueMapDecorator(map);
         }
-        return map;
+        
+        return valueMap;
     }
 }
