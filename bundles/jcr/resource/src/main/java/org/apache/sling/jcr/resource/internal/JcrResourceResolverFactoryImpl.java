@@ -472,7 +472,7 @@ public class JcrResourceResolverFactoryImpl implements
             log.debug("bindResourceProvider: Binding {}", serviceName);
             
             String[] roots = OsgiUtil.toStringArray(reference.getProperty(ResourceProvider.ROOTS));
-            String classifier = (String) reference.getProperty(ResourceProvider.CLASSIFIER);
+            String classifier = reference.getProperty(ResourceProvider.CLASSIFIER);
             if ( classifier == null ) {
               classifier = "";
             }
@@ -518,7 +518,7 @@ public class JcrResourceResolverFactoryImpl implements
         log.debug("unbindResourceProvider: Unbinding {}", serviceName);
 
         String[] roots = OsgiUtil.toStringArray(reference.getProperty(ResourceProvider.ROOTS));
-        String classifier = (String) reference.getProperty(ResourceProvider.CLASSIFIER);
+        String classifier = reference.getProperty(ResourceProvider.CLASSIFIER);
         if ( classifier == null ) {
           classifier = "";
         }
