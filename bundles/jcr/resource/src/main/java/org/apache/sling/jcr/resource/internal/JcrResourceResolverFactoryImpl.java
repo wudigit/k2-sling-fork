@@ -203,7 +203,7 @@ public class JcrResourceResolverFactoryImpl implements
     private boolean mangleNamespacePrefixes;
 
     public JcrResourceResolverFactoryImpl() {
-        this.rootProviderEntry = new ResourceProviderEntry("/", "", null, null);
+        this.rootProviderEntry = new ResourceProviderEntry("/", null, null);
     }
 
     // ---------- JcrResourceResolverFactory -----------------------------------
@@ -472,10 +472,6 @@ public class JcrResourceResolverFactoryImpl implements
             log.debug("bindResourceProvider: Binding {}", serviceName);
             
             String[] roots = OsgiUtil.toStringArray(reference.getProperty(ResourceProvider.ROOTS));
-            String classifier = reference.getProperty(ResourceProvider.CLASSIFIER);
-            if ( classifier == null ) {
-              classifier = "";
-            }
             if (roots != null && roots.length > 0) {
 
                 ResourceProvider provider = (ResourceProvider) componentContext.locateService(
@@ -492,7 +488,7 @@ public class JcrResourceResolverFactoryImpl implements
                         }
 
                         try {
-                            rootProviderEntry.addResourceProvider(root, classifier,
+                            rootProviderEntry.addResourceProvider(root,
                                 provider);
 
                             log.debug("bindResourceProvider: {}={} ({})",
@@ -518,10 +514,6 @@ public class JcrResourceResolverFactoryImpl implements
         log.debug("unbindResourceProvider: Unbinding {}", serviceName);
 
         String[] roots = OsgiUtil.toStringArray(reference.getProperty(ResourceProvider.ROOTS));
-        String classifier = reference.getProperty(ResourceProvider.CLASSIFIER);
-        if ( classifier == null ) {
-          classifier = "";
-        }
         if (roots != null && roots.length > 0) {
 
             // synchronized insertion of new resource providers into
@@ -537,7 +529,7 @@ public class JcrResourceResolverFactoryImpl implements
                     // TODO: Do not remove this path, if another resource
                     // owns it. This may be the case if adding the provider
                     // yielded an ResourceProviderEntryException
-                    rootProviderEntry.removeResourceProvider(root,classifier);
+                    rootProviderEntry.removeResourceProvider(root);
                     
                     log.debug("unbindResourceProvider: root={} ({})", root,
                         serviceName);

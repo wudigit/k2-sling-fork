@@ -33,8 +33,6 @@ import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceProvider;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.SyntheticResource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * The <code>ResourceProviderEntry</code> class represents a node in the tree
@@ -44,8 +42,6 @@ import org.slf4j.LoggerFactory;
  * by their prefix.
  */
 public class ResourceProviderEntry implements Comparable<ResourceProviderEntry> {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(ResourceProviderEntry.class);
 
     // the path to resources provided by the resource provider of this
     // entry. this path is relative to the path of the parent resource
@@ -65,8 +61,6 @@ public class ResourceProviderEntry implements Comparable<ResourceProviderEntry> 
     // entry but with more path elements.
     private ResourceProviderEntry[] entries;
 
-    private String classifier;
-
     /**
      * Creates an instance of this class with the given path relative to the
      * parent resource provider entry, encapsulating the given ResourceProvider.
@@ -75,7 +69,7 @@ public class ResourceProviderEntry implements Comparable<ResourceProviderEntry> 
      * @param provider The resource provider to encapsulate by this entry.
      */
     public ResourceProviderEntry(String path, ResourceProvider provider) {
-        this(path, "", provider, null);
+        this(path, provider, null);
     }
 
     /**
@@ -86,7 +80,7 @@ public class ResourceProviderEntry implements Comparable<ResourceProviderEntry> 
      * @param path The relative path supported by the provider
      * @param provider The resource provider to encapsulate by this entry.
      */
-    public ResourceProviderEntry(String path, String classifier, ResourceProvider provider,
+    public ResourceProviderEntry(String path, ResourceProvider provider,
             ResourceProviderEntry[] entries) {
         if (path.endsWith("/")) {
             this.path = path.substring(0, path.length() - 1);
@@ -95,7 +89,6 @@ public class ResourceProviderEntry implements Comparable<ResourceProviderEntry> 
             this.path = path;
             this.prefix = path + "/";
         }
-        this.classifier = classifier;
         this.provider = provider;
         this.entries = entries;
     }
@@ -238,8 +231,8 @@ public class ResourceProviderEntry implements Comparable<ResourceProviderEntry> 
      *             given prefix has already been registered at or below this
      *             entry.
      */
-    public boolean addResourceProvider(String prefix, String classifier, ResourceProvider provider) {
-        if (prefix.equals(this.path) && classifier.equals(this.classifier)) {
+    public boolean addResourceProvider(String prefix, ResourceProvider provider) {
+        if (prefix.equals(this.path)) {
         
             throw new ResourceProviderEntryException(
                 "ResourceProviderEntry for prefix already exists", this);
@@ -253,15 +246,13 @@ public class ResourceProviderEntry implements Comparable<ResourceProviderEntry> 
             if (entries != null) {
                 for (int i = 0; i < entries.length; i++) {
                     ResourceProviderEntry entry = entries[i];
-                    if (entry.addResourceProvider(prefix, classifier, provider)) {
-                      LOGGER.info("Added Entry to {} ",new Object[]{entry.provider});
+                    if (entry.addResourceProvider(prefix, provider)) {
                         return true;
                     } else if (entry.prefix.startsWith(prefix)
-                        && entry.prefix.charAt(prefix.length()) == '/' && entry.classifier.equals(classifier)) {
+                        && entry.prefix.charAt(prefix.length()) == '/') {
                         ResourceProviderEntry newEntry = new ResourceProviderEntry(
                             prefix, provider);
-                        newEntry.addResourceProvider(entry.path, entry.classifier, entry.provider);
-                        LOGGER.info("Replacing Entry {} with {} ",new Object[]{entries[i].provider,newEntry.provider});
+                        newEntry.addResourceProvider(entry.path, entry.provider);
                         entries[i] = newEntry;
                         return true;
                     }
@@ -272,9 +263,7 @@ public class ResourceProviderEntry implements Comparable<ResourceProviderEntry> 
             // none found, so add it here
             ResourceProviderEntry entry = new ResourceProviderEntry(prefix,
                 provider);
-            LOGGER.info("Appended Entry {} to this entry {} ", new Object[] {entry.provider, this.provider} );
             if (entries == null) {
-                
                 entries = new ResourceProviderEntry[] { entry };
             } else {
                 SortedSet<ResourceProviderEntry> set = new TreeSet<ResourceProviderEntry>();
@@ -290,8 +279,8 @@ public class ResourceProviderEntry implements Comparable<ResourceProviderEntry> 
         return false;
     }
 
-    public boolean removeResourceProvider(String prefix, String classifier) {
-        if (prefix.equals(path) && classifier.equals(this.classifier)) {
+    public boolean removeResourceProvider(String prefix) {
+        if (prefix.equals(path)) {
             return true;
         } else if (prefix.startsWith(this.prefix)) {
             // consider relative path for further checks
@@ -301,7 +290,7 @@ public class ResourceProviderEntry implements Comparable<ResourceProviderEntry> 
             if (entries != null) {
                 for (int i = 0; i < entries.length; i++) {
                     ResourceProviderEntry entry = entries[i];
-                    if (entry.removeResourceProvider(prefix, classifier)) {
+                    if (entry.removeResourceProvider(prefix)) {
                         if (entries.length == 1) {
                             entries = null;
                         } else {
@@ -323,7 +312,7 @@ public class ResourceProviderEntry implements Comparable<ResourceProviderEntry> 
                             String pathPrefix = this.prefix + entry.prefix;
                             for (ResourceProviderEntry child : children) {
                                 String path = pathPrefix + child.path;
-                                addResourceProvider(path, classifier, child.provider);
+                                addResourceProvider(path, child.provider);
                             }
                         }
 
@@ -372,17 +361,11 @@ public class ResourceProviderEntry implements Comparable<ResourceProviderEntry> 
             if (entries != null) {
 
                 // consider relative path for further checks
-                String relativePath = path.substring(this.prefix.length());
+                path = path.substring(this.prefix.length());
 
                 for (ResourceProviderEntry entry : entries) {
-                    Resource test = null;
-                    if ( "/".equals(entry.prefix) ) {
-                     test = entry.getResource(resourceResolver, path,
+                    Resource test = entry.getResource(resourceResolver, path,
                         fullPath);
-                    } else {
-                      test = entry.getResource(resourceResolver, relativePath,
-                          fullPath);     
-                    }
                     if (test != null) {
                         return test;
                     }
