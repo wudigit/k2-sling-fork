@@ -17,6 +17,9 @@
  */
 package org.apache.sling.jcr.resource;
 
+import org.apache.sling.api.resource.ResourceResolver;
+
+
 /**
  * Determines the resource type for a path, which may or may not exist. This is only used
  * where the resource does not exist, giving other bundles the opportunity to specify a
@@ -28,9 +31,10 @@ public interface PathResourceTypeProvider {
 
   /**
    * Get the resource type for a path.
+   * @param resourceResolver the resource resolver.
    * @param absRealPath the absolute URI of the resource.
    * @return the resource type of the path, null if there is no match.
    */
-  String getResourceTypeFromPath(String absRealPath);
+  String getResourceTypeFromPath(ResourceResolver resourceResolver, String absRealPath);
 
 }
