@@ -33,6 +33,8 @@ import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceProvider;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.SyntheticResource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The <code>ResourceProviderEntry</code> class represents a node in the tree
@@ -42,6 +44,8 @@ import org.apache.sling.api.resource.SyntheticResource;
  * by their prefix.
  */
 public class ResourceProviderEntry implements Comparable<ResourceProviderEntry> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ResourceProviderEntry.class);
 
     // the path to resources provided by the resource provider of this
     // entry. this path is relative to the path of the parent resource
@@ -250,12 +254,14 @@ public class ResourceProviderEntry implements Comparable<ResourceProviderEntry> 
                 for (int i = 0; i < entries.length; i++) {
                     ResourceProviderEntry entry = entries[i];
                     if (entry.addResourceProvider(prefix, classifier, provider)) {
+                      LOGGER.info("Added Entry to {} ",new Object[]{entry.provider});
                         return true;
                     } else if (entry.prefix.startsWith(prefix)
                         && entry.prefix.charAt(prefix.length()) == '/' && entry.classifier.equals(classifier)) {
                         ResourceProviderEntry newEntry = new ResourceProviderEntry(
                             prefix, provider);
                         newEntry.addResourceProvider(entry.path, entry.classifier, entry.provider);
+                        LOGGER.info("Replacing Entry {} with {} ",new Object[]{entries[i].provider,newEntry.provider});
                         entries[i] = newEntry;
                         return true;
                     }
@@ -266,6 +272,7 @@ public class ResourceProviderEntry implements Comparable<ResourceProviderEntry> 
             // none found, so add it here
             ResourceProviderEntry entry = new ResourceProviderEntry(prefix,
                 provider);
+            LOGGER.info("Appended Entry {} to this entry {} ", new Object[] {entry.provider, this.provider} );
             if (entries == null) {
                 
                 entries = new ResourceProviderEntry[] { entry };
