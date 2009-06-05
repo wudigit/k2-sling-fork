@@ -54,10 +54,9 @@
 				<extensions>true</extensions>
 				<configuration>
 					<instructions>
-                        <Export-Package> org.apache.sling.jackrabbit.usermanager.api.event </Export-Package>
+                        <Export-Package> org.apache.sling.jackrabbit.usermanager.event </Export-Package>
 						<Private-Package>
-                            org.apache.sling.jackrabbit.usermanager.post.*,
-                            org.apache.sling.jackrabbit.usermanager.resource,
+                            org.apache.sling.jackrabbit.usermanager.*
 						</Private-Package>
 						<Sling-Initial-Content />
 						<Sling-Nodetypes />
