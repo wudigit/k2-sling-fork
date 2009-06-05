@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import javax.jcr.RepositoryException;
-import javax.jcr.Session;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.jackrabbit.api.security.user.Authorizable;
@@ -99,8 +98,6 @@ public class DeleteAuthorizableServlet extends AbstractAuthorizablePostServlet {
 
             item.remove();
             changes.add(Modification.onDeleted(resource.getPath()));
-            fireDeleteEvent(resource.adaptTo(Session.class), request,item,changes);
-
         } else {
             while (res.hasNext()) {
                 Resource resource = res.next();
@@ -108,15 +105,12 @@ public class DeleteAuthorizableServlet extends AbstractAuthorizablePostServlet {
                 if (item != null) {
                     item.remove();
                     changes.add(Modification.onDeleted(resource.getPath()));
-                    fireDeleteEvent(resource.adaptTo(Session.class), request,item,changes);
                 }
             }
         }
 	}
 	
 	
-
-
     /**
      * Returns an iterator on <code>Resource</code> instances addressed in the
      * {@link SlingPostConstants#RP_APPLY_TO} request parameter. If the request

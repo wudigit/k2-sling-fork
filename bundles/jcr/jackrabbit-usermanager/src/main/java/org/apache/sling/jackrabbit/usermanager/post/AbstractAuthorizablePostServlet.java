@@ -48,16 +48,12 @@ import org.apache.sling.api.servlets.HtmlResponse;
 import org.apache.sling.api.servlets.SlingAllMethodsServlet;
 import org.apache.sling.api.wrappers.SlingRequestPaths;
 import org.apache.sling.commons.osgi.OsgiUtil;
-import org.apache.sling.jackrabbit.usermanager.event.AuthoizableEvent;
-import org.apache.sling.jackrabbit.usermanager.event.SynchronousAuthoizableEvent;
-import org.apache.sling.jackrabbit.usermanager.event.AuthoizableEvent.Operation;
 import org.apache.sling.jackrabbit.usermanager.post.impl.DateParser;
 import org.apache.sling.jackrabbit.usermanager.post.impl.RequestProperty;
 import org.apache.sling.jackrabbit.usermanager.resource.AuthorizableResourceProvider;
 import org.apache.sling.servlets.post.Modification;
 import org.apache.sling.servlets.post.SlingPostConstants;
 import org.osgi.service.component.ComponentContext;
-import org.osgi.service.event.EventAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,12 +88,6 @@ public abstract class AbstractAuthorizablePostServlet extends SlingAllMethodsSer
      * The number of levels folder used to store a user, could be a configuration option.
      */
     private static final int STORAGE_LEVELS = 3;
-    
-    
-    /**
-     * @scr.reference bind="bindEventAdmin" unbind="bindEventAdmin" interface="org.osgi.service.event.EventAdmin" 
-     */
-    private EventAdmin eventAdmin;
 
 	private DateParser dateParser;
 	
@@ -796,79 +786,4 @@ public abstract class AbstractAuthorizablePostServlet extends SlingAllMethodsSer
 	}
 	return new String(c);
     }
-    
-    
-  /**
-   * Fire events when an authorizable is created.
-   * @param session The session used to create the authorizable.
-   * @param request The request that triggered the create
-   * @param authorizable The newly created authorizable.
-   * @param changes a list of changes
-   */
-  protected void fireCreateEvent(Session session, SlingHttpServletRequest request,
-      Authorizable authorizable, List<Modification> changes) {
-    fireEvent(Operation.create, session, request, authorizable, changes);
-  }
-
-  /**
-   * Fire events when an authorizable is deleted
-   * @param session The session used to create the authorizable.
-   * @param request The request that triggered the delte
-   * @param authorizable The newly deleted authorizable.
-   * @param changes a list of changes
-   */
-  protected void fireDeleteEvent(Session session, SlingHttpServletRequest request,
-      Authorizable authorizable, List<Modification> changes) {
-    fireEvent(Operation.delete, session, request, authorizable, changes);
-  }
-
-  /**
-   * Fire events when an authorizable is updated.
-   * @param session The session used to update the authorizable.
-   * @param request The request that triggered the update
-   * @param authorizable The newly updated authorizable.
-   * @param changes a list of changes
-   */
-  protected void fireUpdateEvent(Session session, Authorizable authorizable,
-      SlingHttpServletRequest request, List<Modification> changes) {
-    fireEvent(Operation.update, session, request, authorizable, changes);
-  }
-
-  /**
-   * Fire events, into OSGi, one synchronous one asynchronous.
-   * @param operation the operation being performed.
-   * @param session the session performing operation.
-   * @param request the request that triggered the operation.
-   * @param authorizable the authorizable that is the target of the operation.
-   * @param changes a list of {@link Modification} caused by the operation.
-   */
-  private void fireEvent(Operation operation, Session session,
-      SlingHttpServletRequest request, Authorizable authorizable,
-      List<Modification> changes) {
-    try {
-      eventAdmin.sendEvent(new SynchronousAuthoizableEvent(operation, session, request,
-          authorizable, changes));
-      eventAdmin
-          .postEvent(new AuthoizableEvent(operation, authorizable, request, changes));
-    } catch (Throwable t) {
-      log.warn("Failed to fire event", t);
-    }
-  }
-
-  /**
-   * @param eventAdmin the new EventAdmin service to bind to this service.
-   */
-  protected void bindEventAdmin(EventAdmin eventAdmin) {
-    this.eventAdmin = eventAdmin;
-  }
-
-  /**
-   * @param eventAdmin the EventAdminService to be unbound from this service.
-   */
-  protected void unbindEventAdmin(EventAdmin eventAdmin) {
-    this.eventAdmin = null;
-  }
-    
-
-
 }
