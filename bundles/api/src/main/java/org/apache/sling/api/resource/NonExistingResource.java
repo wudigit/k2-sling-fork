@@ -21,14 +21,14 @@ package org.apache.sling.api.resource;
 /**
  * Simple helper class representing nonexisting resources.
  */
-public class NonExistingResource extends SyntheticResource {
+public final class NonExistingResource extends SyntheticResource {
 
     public NonExistingResource(ResourceResolver resourceResolver,
             String resourceURI) {
         super(resourceResolver, resourceURI, RESOURCE_TYPE_NON_EXISTING);
     }
 
-    public String getResourceType() {
+    public final String getResourceType() {
         // overwrite to prevent overwriting of this method in extensions of
         // this class because the specific resource type is the marker of a
         // NonExistingResource
