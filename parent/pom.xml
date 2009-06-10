@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.apache</groupId>
         <artifactId>apache</artifactId>
-        <version>4</version>
+        <version>6</version>
     </parent>
 
     <groupId>org.apache.sling</groupId>
@@ -47,8 +47,9 @@
 
 
     <properties>
-        <site.jira.version.id>12313662</site.jira.version.id>
+        <site.jira.version.id>12313945</site.jira.version.id>
         <site.javadoc.exclude />
+        <organization.logo>http://incubator.apache.org/sling/site/media.data/logo.png</organization.logo>
     </properties>
     
 
@@ -80,7 +81,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-report-plugin</artifactId>
-                <version>2.4.2</version>
+                <version>2.4.3</version>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -108,7 +109,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
-                <version>1.0-alpha-3</version>
+                <version>1.0-beta-1</version>
                 <executions>
                     <execution>
                         <id>enforce-java</id>
@@ -171,6 +172,21 @@ setting is not correct.
                 </executions>
             </plugin>
 
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>ianal-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>verify-legal-files</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Fail the build if any artifacts are missing legal files -->
+                            <strict>true</strict>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
 
         <pluginManagement>
@@ -178,22 +194,22 @@ setting is not correct.
                 <plugin>
                     <groupId>org.apache.sling</groupId>
                     <artifactId>maven-sling-plugin</artifactId>
-                    <version>2.0.2-incubator</version>
+                    <version>2.0.4-incubator</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.sling</groupId>
                     <artifactId>maven-jspc-plugin</artifactId>
-                    <version>2.0.2-incubator</version>
+                    <version>2.0.4-incubator</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.sling</groupId>
                     <artifactId>maven-jcrocm-plugin</artifactId>
-                    <version>2.0.2-incubator</version>
+                    <version>2.0.4-incubator</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.felix</groupId>
                     <artifactId>maven-scr-plugin</artifactId>
-                    <version>1.0.8</version>
+                    <version>1.2.0</version>
                     <executions>
                         <execution>
                             <id>generate-scr-scrdescriptor</id>
@@ -215,7 +231,7 @@ setting is not correct.
                 <plugin>
                     <groupId>org.apache.felix</groupId>
                     <artifactId>maven-bundle-plugin</artifactId>
-                    <version>1.4.3</version>
+                    <version>2.0.0</version>
                     <inherited>true</inherited>
                     <configuration>
                         <instructions>
@@ -231,53 +247,26 @@ setting is not correct.
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-release-plugin</artifactId>
-                    <version>2.0-beta-8</version>
                     <configuration>
                         <tagBase>
                             https://svn.apache.org/repos/asf/incubator/sling/tags
                         </tagBase>
-                        <goals>deploy</goals>
                     </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-resources-plugin</artifactId>
-                    <version>2.3</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-surefire-plugin</artifactId>
-                    <version>2.4.3</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-site-plugin</artifactId>
-                    <version>2.0</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-war-plugin</artifactId>
-                    <version>2.1-alpha-2</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-plugin-plugin</artifactId>
-                    <version>2.4.2</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-gpg-plugin</artifactId>
-                    <version>1.0-alpha-4</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-assembly-plugin</artifactId>
-                    <version>2.2-beta-2</version>
+                    <version>2.2-beta-4</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-dependency-plugin</artifactId>
-                    <version>2.0</version>
+                    <version>2.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-war-plugin</artifactId>
+                    <version>2.1-beta-1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.mortbay.jetty</groupId>
@@ -288,6 +277,16 @@ setting is not correct.
                     <groupId>org.codehaus.cargo</groupId>
                     <artifactId>cargo-maven2-plugin</artifactId>
                     <version>0.3.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>ianal-maven-plugin</artifactId>
+                    <version>1.0-alpha-1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.rat</groupId>
+                    <artifactId>apache-rat-plugin</artifactId>
+                    <version>0.6</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -321,40 +320,15 @@ setting is not correct.
             </build>
         </profile>
         <profile>
-            <id>release</id>
+            <!-- add assembly build to the generic release profile -->
+            <id>apache-release</id>
             <build>
                 <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-gpg-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>sign-artifacts</id>
-                                <phase>verify</phase>
-                                <goals>
-                                    <goal>sign</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-javadoc-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>attach-javadocs</id>
-                                <goals>
-                                    <goal>jar</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-assembly-plugin</artifactId>
                         <configuration>
                             <descriptorRefs>
-                                <descriptorRef>bin</descriptorRef>
                                 <descriptorRef>project</descriptorRef>
                             </descriptorRefs>
                         </configuration>
@@ -364,6 +338,40 @@ setting is not correct.
                                 <phase>package</phase>
                                 <goals>
                                     <goal>attached</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+	    <!--
+	    We should execute this profile manually to make sure that all files in our source code contain proper licenses.
+	    This is very important and should not be skipped in any scenario.  It is very importnt for us to follow ASF policy.
+	    Example:  mvn -P prepare-release install
+	    -->    
+        <profile>
+            <id>rat</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.rat</groupId>
+                        <artifactId>apache-rat-plugin</artifactId>
+                        <configuration>
+                            <excludes>
+                                <!--  Used by maven-remote-resources-plugin -->
+                                <exclude>src/main/appended-resources/META-INF/*</exclude>
+                                <!--  Generated by maven-remote-resources-plugin -->
+                                <exclude>velocity.log</exclude>
+                                <!-- don't check anything in target -->
+                                <exclude>target/*</exclude>
+                            </excludes>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>check</goal>
                                 </goals>
                             </execution>
                         </executions>
@@ -388,6 +396,9 @@ setting is not correct.
             </archive>
             <otherArchives>
                 <otherArchive>
+                    http://sling-dev.markmail.org/
+                </otherArchive>
+                <otherArchive>
                     http://www.mail-archive.com/sling-dev@incubator.apache.org/
                 </otherArchive>
             </otherArchives>
@@ -404,6 +415,9 @@ setting is not correct.
                 http://mail-archives.apache.org/mod_mbox/incubator-sling-commits/
             </archive>
             <otherArchives>
+                <otherArchive>
+                    http://sling-commits.markmail.org/
+                </otherArchive>
                 <otherArchive>
                     http://www.mail-archive.com/sling-commits@incubator.apache.org/
                 </otherArchive>
@@ -482,6 +496,16 @@ setting is not correct.
                 <role>Java Developer</role>
             </roles>
             <timezone>+1</timezone>
+        </developer>
+        <developer>
+            <name>Padraic Hannon</name>
+            <id>hannonpi</id>
+            <email />
+            <organization>Edmunds, Inc.</organization>
+            <roles>
+                <role>Java Developer</role>
+            </roles>
+            <timezone />
         </developer>
         <developer>
             <name>Vidar Skauge Ramdal</name>
@@ -604,57 +628,6 @@ setting is not correct.
 
         </dependencies>
     </dependencyManagement>
-
-
-    <pluginRepositories>
-        <pluginRepository>
-            <id>apache.snapshots</id>
-            <name>Apache Snapshot Repository</name>
-            <url>http://repository.apache.org/snapshots</url>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-        </pluginRepository>
-        <pluginRepository>
-            <id>apache.incubating</id>
-            <name>Apache Incubating Repository</name>
-            <url>http://people.apache.org/repo/m2-incubating-repository</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-        </pluginRepository>
-    </pluginRepositories>
-
-    <repositories>
-        <repository>
-            <id>apache.incubating</id>
-            <name>Apache Incubating Repository</name>
-            <url>http://people.apache.org/repo/m2-incubating-repository</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-        </repository>
-        <repository>
-            <id>apache.snapshots</id>
-            <name>Apache Snapshot Repository</name>
-            <url>http://repository.apache.org/snapshots</url>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-        </repository>
-    </repositories>
 
     <distributionManagement>
         <site>
